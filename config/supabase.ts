@@ -2,19 +2,22 @@ import { createClient } from '@supabase/supabase-js'
 import { config } from './index'
 
 // Client-side Supabase client (uses anon key)
-export const supabase = createClient(
-  config.supabase.url,
-  config.supabase.anonKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  }
-)
+// Only create if environment variables are available
+export const supabase = config.supabase.url && config.supabase.anonKey
+  ? createClient(
+      config.supabase.url,
+      config.supabase.anonKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+        },
+      }
+    )
+  : null
 
 // Server-side Supabase client (uses service role key for admin operations)
-export const supabaseAdmin = config.supabase.serviceRoleKey
+export const supabaseAdmin = config.supabase.url && config.supabase.serviceRoleKey
   ? createClient(config.supabase.url, config.supabase.serviceRoleKey, {
       auth: {
         persistSession: false,
