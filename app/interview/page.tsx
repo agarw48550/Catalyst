@@ -1,39 +1,257 @@
-import { Metadata } from 'next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare } from 'lucide-react'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Interview Practice - Catalyst',
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+
+type Phase = 'setup' | 'interview' | 'review'
+
+interface QuestionFeedback {
+  question: string
+  feedback: string
+  score: number
+}
+
+interface FeedbackResult {
+  overallScore: number
+  perQuestion: QuestionFeedback[]
+  strengths: string[]
+  weaknesses: string[]
+  tips: string[]
 }
 
 export default function InterviewPage() {
+  const [phase, setPhase] = useState<Phase>('setup')
+  const [jobRole, setJobRole] = useState('')
+  const [interviewType, setInterviewType] = useState('behavioral')
+  const [questions, setQuestions] = useState<string[]>([])
+  const [answers, setAnswers] = useState<string[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentAnswer, setCurrentAnswer] = useState('')
+  const [feedback, setFeedback] = useState<FeedbackResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function startInterview(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/interview/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobRole, interviewType, language: 'English' }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to start interview')
+      }
+      const data = await res.json()
+      setQuestions(data.questions)
+      setAnswers(new Array(data.questions.length).fill(''))
+      setCurrentIndex(0)
+      setCurrentAnswer('')
+      setPhase('interview')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function submitAnswer() {
+    const newAnswers = [...answers]
+    newAnswers[currentIndex] = currentAnswer
+    setAnswers(newAnswers)
+
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1)
+      setCurrentAnswer(newAnswers[currentIndex + 1] || '')
+    } else {
+      getFeedback(newAnswers)
+    }
+  }
+
+  async function getFeedback(finalAnswers: string[]) {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/interview/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questions, answers: finalAnswers, jobRole }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to get feedback')
+      }
+      setFeedback(await res.json())
+      setPhase('review')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">AI Interview Coach</h1>
-        <p className="text-muted-foreground">
-          Practice interviews with voice-enabled AI and get real-time feedback
-        </p>
+        <p className="text-muted-foreground">Practice interviews and get AI-powered feedback</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <MessageSquare className="h-12 w-12 text-primary mb-4" />
-          <CardTitle>Voice-Enabled Interview Practice</CardTitle>
-          <CardDescription>
-            Feature coming soon - Powered by Gemini 2.5 Flash Native Audio Dialog
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-            <li>Full duplex voice conversation</li>
-            <li>Real-time AI feedback</li>
-            <li>Technical and behavioral interviews</li>
-            <li>Live transcript</li>
-            <li>Email interview reports</li>
-          </ul>
-        </CardContent>
-      </Card>
+      {phase === 'setup' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Setup Your Interview</CardTitle>
+            <CardDescription>Configure your practice session</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error && <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
+            <form onSubmit={startInterview} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="jobRole">Job Role</Label>
+                <Input
+                  id="jobRole"
+                  placeholder="e.g. Software Engineer, Product Manager"
+                  value={jobRole}
+                  onChange={(e) => setJobRole(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Interview Type</Label>
+                <div className="flex gap-4">
+                  {['behavioral', 'technical', 'hr'].map((type) => (
+                    <label key={type} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="interviewType"
+                        value={type}
+                        checked={interviewType === type}
+                        onChange={(e) => setInterviewType(e.target.value)}
+                      />
+                      <span className="capitalize text-sm">{type}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Generating Questions...' : 'Start Interview'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {phase === 'interview' && questions.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Question {currentIndex + 1} of {questions.length}</span>
+            <span>{jobRole} • {interviewType}</span>
+          </div>
+          <Progress value={((currentIndex) / questions.length) * 100} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{questions[currentIndex]}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <textarea
+                className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
+                placeholder="Type your answer here..."
+                value={currentAnswer}
+                onChange={(e) => setCurrentAnswer(e.target.value)}
+              />
+              {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
+              <Button
+                onClick={submitAnswer}
+                className="w-full"
+                disabled={loading || !currentAnswer.trim()}
+              >
+                {loading
+                  ? 'Getting Feedback...'
+                  : currentIndex < questions.length - 1
+                  ? 'Submit & Next Question'
+                  : 'Finish & Get Feedback'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {phase === 'review' && feedback && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Overall Score</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <Progress value={feedback.overallScore} className="flex-1" />
+                <span className="text-2xl font-bold">{feedback.overallScore}%</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-green-600">Strengths</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="space-y-1">
+                  {feedback.strengths.map((s, i) => (
+                    <li key={i} className="text-sm flex gap-2"><span className="text-green-500">✓</span>{s}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm text-orange-600">Areas to Improve</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="space-y-1">
+                  {feedback.weaknesses.map((w, i) => (
+                    <li key={i} className="text-sm flex gap-2"><span className="text-orange-500">!</span>{w}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle>Per-Question Feedback</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {feedback.perQuestion.map((pq, i) => (
+                <div key={i} className="border-b pb-3 last:border-b-0">
+                  <p className="text-sm font-medium">{pq.question}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{pq.feedback}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Progress value={pq.score} className="w-24 h-2" />
+                    <span className="text-xs text-muted-foreground">{pq.score}%</span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Tips for Next Time</CardTitle></CardHeader>
+            <CardContent>
+              <ul className="space-y-1">
+                {feedback.tips.map((tip, i) => (
+                  <li key={i} className="text-sm flex gap-2"><span className="text-primary">•</span>{tip}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Button onClick={() => { setPhase('setup'); setFeedback(null) }} variant="outline" className="w-full">
+            Start New Interview
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -19,49 +19,49 @@ export type TaskType =
  */
 const taskConfig: Record<TaskType, Partial<GeminiRequest>> = {
   'resume-analysis': {
-    model: 'gemini-1.5-pro',
+    model: 'gemini-2.5-pro',
     temperature: 0.3,
     maxTokens: 2048,
     systemInstruction: 'You are an expert resume analyst. Analyze resumes for ATS optimization, clarity, and impact.',
   },
   'resume-generation': {
-    model: 'gemini-1.5-pro',
+    model: 'gemini-2.5-pro',
     temperature: 0.5,
     maxTokens: 3072,
     systemInstruction: 'You are a professional resume writer. Create clear, ATS-optimized content.',
   },
   'interview-questions': {
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 1024,
     systemInstruction: 'You are an experienced interviewer. Ask relevant, probing questions.',
   },
   'interview-feedback': {
-    model: 'gemini-1.5-pro',
+    model: 'gemini-2.5-pro',
     temperature: 0.4,
     maxTokens: 2048,
     systemInstruction: 'You are an interview coach. Provide constructive, actionable feedback.',
   },
   'job-matching': {
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.0-flash',
     temperature: 0.2,
     maxTokens: 1024,
     systemInstruction: 'You are a career counselor. Match candidates with suitable job opportunities.',
   },
   'career-research': {
-    model: 'gemini-1.5-pro',
+    model: 'gemini-2.5-pro',
     temperature: 0.6,
     maxTokens: 3072,
     systemInstruction: 'You are a career research expert. Provide insights on industries, trends, and opportunities.',
   },
   'chat': {
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.0-flash',
     temperature: 0.8,
     maxTokens: 2048,
     systemInstruction: 'You are a helpful career assistant. Be conversational and supportive.',
   },
   'general': {
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
