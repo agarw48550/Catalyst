@@ -47,7 +47,10 @@ async function sendViaMailgun(params: EmailParams): Promise<void> {
     // Add attachments if any
     if (params.attachments) {
       params.attachments.forEach((attachment) => {
-        const blob = new Blob([attachment.content], { 
+        const content = typeof attachment.content === 'string' 
+          ? attachment.content 
+          : Buffer.from(attachment.content)
+        const blob = new Blob([content], { 
           type: attachment.contentType || 'application/octet-stream' 
         })
         formData.append('attachment', blob, attachment.filename)
