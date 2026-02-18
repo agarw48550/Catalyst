@@ -24,8 +24,8 @@ export const config = {
     apiKey: process.env.GEMINI_API_KEY || '',
     apiKeySecondary: process.env.GEMINI_API_KEY_SECONDARY || '',
     apiKeyTertiary: process.env.GEMINI_API_KEY_TERTIARY || '',
-    defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash-exp',
-    flashModel: process.env.GEMINI_FLASH_MODEL || 'gemini-2.0-flash-exp',
+    defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash',
+    flashModel: process.env.GEMINI_FLASH_MODEL || 'gemini-2.0-flash',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     // Fallback order for API keys
     fallbackOrder: ['primary', 'secondary', 'tertiary'] as const,
