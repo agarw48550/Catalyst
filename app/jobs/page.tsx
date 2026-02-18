@@ -50,7 +50,12 @@ export default function JobsPage() {
   }
 
   function saveJob(job: Job) {
-    const saved = JSON.parse(localStorage.getItem('savedJobs') || '[]')
+    let saved: Job[] = []
+    try {
+      saved = JSON.parse(localStorage.getItem('savedJobs') || '[]')
+    } catch {
+      saved = []
+    }
     if (!savedIds.has(job.id)) {
       saved.push(job)
       localStorage.setItem('savedJobs', JSON.stringify(saved))

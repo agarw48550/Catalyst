@@ -51,11 +51,7 @@ export default function ResearchPage() {
 
   function handleQuickAction(action: typeof quickActions[0]) {
     setType(action.type)
-    const q = prompt(`${action.label}\n\nEnter your query (${action.placeholder}):`)
-    if (q) {
-      setQuery(q)
-      handleSearch(q, action.type)
-    }
+    setQuery(action.placeholder.replace(/^e\.g\.\s*/i, ''))
   }
 
   async function handleFormSubmit(e: React.FormEvent) {
@@ -74,7 +70,7 @@ export default function ResearchPage() {
         {quickActions.map((action) => (
           <Button
             key={action.type}
-            variant="outline"
+            variant={type === action.type ? 'default' : 'outline'}
             className="h-auto flex-col py-3 gap-1"
             onClick={() => handleQuickAction(action)}
             disabled={loading}
@@ -89,7 +85,7 @@ export default function ResearchPage() {
         <CardContent className="pt-4">
           <form onSubmit={handleFormSubmit} className="flex gap-3">
             <Input
-              placeholder="Ask anything about careers, companies, salaries..."
+              placeholder={quickActions.find((a) => a.type === type)?.placeholder || 'Ask anything about careers, companies, salaries...'}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1"
