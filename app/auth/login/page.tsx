@@ -38,19 +38,6 @@ function LoginForm() {
     }
   }
 
-  async function handleGoogle() {
-    try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin + '/auth/callback' },
-      })
-      if (error) throw error
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed')
-    }
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-4">
       <div className="w-full max-w-md">
@@ -96,7 +83,7 @@ function LoginForm() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-            <div className="mt-4">
+            <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -105,13 +92,9 @@ function LoginForm() {
                   <span className="bg-white/80 px-2 text-muted-foreground">{t('auth.orContinue')}</span>
                 </div>
               </div>
-              <div className="mt-6 space-y-3">
-                <Button variant="outline" type="button" className="w-full h-11 rounded-xl border-2 font-bold" onClick={handleGoogle}>
-                  <img src="/google.svg" className="h-4 w-4 mr-2" alt="" />
-                  Google
-                </Button>
+              <div className="mt-4">
                 <Link href="/auth/magic-link" className="block">
-                  <Button variant="ghost" type="button" className="w-full h-11 rounded-xl font-bold text-slate-600">
+                  <Button variant="outline" type="button" className="w-full h-11 rounded-xl border-2 font-bold text-slate-600">
                     <Mail className="h-4 w-4 mr-2" />
                     {t('auth.magic.title')}
                   </Button>

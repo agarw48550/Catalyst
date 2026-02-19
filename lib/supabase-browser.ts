@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-let supabaseInstance: ReturnType<typeof createClient> | null = null
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
 export function getSupabaseBrowserClient() {
   if (supabaseInstance) return supabaseInstance
@@ -12,12 +12,9 @@ export function getSupabaseBrowserClient() {
     throw new Error('Missing Supabase environment variables')
   }
   
-  supabaseInstance = createClient(url, key, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  })
+  // createBrowserClient from @supabase/ssr stores session tokens
+  // in cookies (not localStorage), so Next.js middleware can read them.
+  supabaseInstance = createBrowserClient(url, key)
   
   return supabaseInstance
 }

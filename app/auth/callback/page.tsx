@@ -53,7 +53,7 @@ function CallbackHandler() {
                 }
 
                 // No session yet — wait for auth state change (handles hash fragment tokens)
-                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
                     if (session) {
                         subscription.unsubscribe()
                         if (isEmailVerification) {

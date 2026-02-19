@@ -10,12 +10,12 @@ export function useAuth() {
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
+    supabase.auth.getSession().then(({ data }: any) => {
+      setUser(data.session?.user ?? null)
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setUser(session?.user ?? null)
     })
 
@@ -40,20 +40,11 @@ export function useAuth() {
     window.location.href = '/dashboard'
   }
 
-  async function signInWithGoogle() {
-    const supabase = getSupabaseBrowserClient()
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth/callback' },
-    })
-    if (error) throw error
-  }
-
   async function signOut() {
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
     window.location.href = '/'
   }
 
-  return { user, loading, signIn, signUp, signInWithGoogle, signOut }
+  return { user, loading, signIn, signUp, signOut }
 }

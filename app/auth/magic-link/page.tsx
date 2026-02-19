@@ -26,7 +26,9 @@ export default function MagicLinkPage() {
             const { error } = await supabase.auth.signInWithOtp({
                 email,
                 options: {
-                    emailRedirectTo: window.location.origin + '/auth/callback',
+                    // Use the server-side confirm route which handles PKCE exchange
+                    // and sets cookies properly before redirecting to dashboard
+                    emailRedirectTo: window.location.origin + '/auth/confirm',
                 },
             })
             if (error) throw error

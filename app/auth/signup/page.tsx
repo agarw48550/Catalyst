@@ -33,7 +33,10 @@ export default function SignupPage() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name } },
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: window.location.origin + '/auth/confirm',
+        },
       })
       if (error) throw error
       if (data.session) {
@@ -45,19 +48,6 @@ export default function SignupPage() {
       setError(err.message || 'Sign up failed')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleGoogle() {
-    try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin + '/auth/callback' },
-      })
-      if (error) throw error
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed')
     }
   }
 
@@ -114,21 +104,6 @@ export default function SignupPage() {
                     {loading ? 'Creating account...' : 'Create Account'}
                   </Button>
                 </form>
-                <div className="mt-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white/80 px-2 text-muted-foreground">Or continue with</span>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button variant="outline" type="button" className="w-full" onClick={handleGoogle}>
-                      Google
-                    </Button>
-                  </div>
-                </div>
               </>
             )}
           </CardContent>

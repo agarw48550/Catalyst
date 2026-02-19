@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   ArrowRight,
@@ -23,39 +22,6 @@ import {
 } from 'lucide-react'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
 
-function useCountUp(end: number, duration: number = 2000) {
-  const [count, setCount] = useState(0)
-  const [started, setStarted] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started) {
-          setStarted(true)
-        }
-      },
-      { threshold: 0.3 }
-    )
-    if (ref.current) observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [started])
-
-  useEffect(() => {
-    if (!started) return
-    let startTime: number | null = null
-    function animate(ts: number) {
-      if (!startTime) startTime = ts
-      const progress = Math.min((ts - startTime) / duration, 1)
-      setCount(Math.floor(progress * end))
-      if (progress < 1) requestAnimationFrame(animate)
-    }
-    requestAnimationFrame(animate)
-  }, [started, end, duration])
-
-  return { count, ref }
-}
-
 export default function HomePage() {
   const { t } = useLanguage()
 
@@ -65,11 +31,6 @@ export default function HomePage() {
       features.scrollIntoView({ behavior: 'smooth' })
     }
   }
-
-  const stat1 = useCountUp(10000, 2000)
-  const stat2 = useCountUp(25000, 2200)
-  const stat3 = useCountUp(15000, 2400)
-  const stat4 = useCountUp(500000, 2600)
 
   return (
     <div className="flex flex-col min-h-screen selection:bg-primary selection:text-white">
@@ -240,38 +201,6 @@ export default function HomePage() {
                 color="emerald"
                 delay="300"
               />
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Section */}
-        <section className="py-24 bg-white relative">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-4">
-                Built for Scale, Designed for India
-              </h2>
-              <p className="text-lg text-slate-500 max-w-2xl mx-auto">
-                Thousands of job seekers trust Catalyst to power their career journey.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div ref={stat1.ref} className="text-center p-8 rounded-3xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100/50 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black tracking-tighter text-primary mb-2">{stat1.count >= 10000 ? '10k+' : stat1.count.toLocaleString()}</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Users</div>
-              </div>
-              <div ref={stat2.ref} className="text-center p-8 rounded-3xl bg-gradient-to-br from-violet-50 to-white border border-violet-100/50 hover:shadow-xl hover:shadow-violet-500/5 transition-all duration-500 hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black tracking-tighter text-violet-600 mb-2">{stat2.count >= 25000 ? '25k+' : stat2.count.toLocaleString()}</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Resumes Built</div>
-              </div>
-              <div ref={stat3.ref} className="text-center p-8 rounded-3xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-500 hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black tracking-tighter text-emerald-600 mb-2">{stat3.count >= 15000 ? '15k+' : stat3.count.toLocaleString()}</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Interviews Aced</div>
-              </div>
-              <div ref={stat4.ref} className="text-center p-8 rounded-3xl bg-gradient-to-br from-amber-50 to-white border border-amber-100/50 hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-500 hover:-translate-y-1">
-                <div className="text-4xl sm:text-5xl font-black tracking-tighter text-amber-600 mb-2">{stat4.count >= 500000 ? '500k+' : stat4.count.toLocaleString()}</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jobs Discovered</div>
-              </div>
             </div>
           </div>
         </section>

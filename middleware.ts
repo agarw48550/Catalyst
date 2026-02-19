@@ -1,31 +1,29 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createSupabaseMiddlewareClient } from '@/lib/supabase-server'
 
 const protectedRoutes = ['/dashboard', '/resume', '/interview', '/jobs', '/research', '/settings']
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const isProtected = protectedRoutes.some((route) => pathname.startsWith(route))
   if (!isProtected) return NextResponse.next()
 
-  // Check for Supabase session cookies
-  // Supabase v2 stores tokens as chunked cookies: sb-<ref>-auth-token.0, .1, etc.
-  // Also check for the base cookie name and the code-verifier (PKCE flow)
-  const allCookies = request.cookies.getAll()
-  const hasSession = allCookies.some(
-    (cookie) =>
-      cookie.name.startsWith('sb-') &&
-      (cookie.name.includes('-auth-token') || cookie.name.includes('auth-token'))
-  )
+  // Use @supabase/ssr server client to read & refresh auth cookies
+  const { supabase, response } = createSupabaseMiddlewareClient(request)
 
-  if (!hasSession) {
+  // getUser() validates the JWT server-side and refreshes expired tokens
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     const loginUrl = new URL('/auth/login', request.url)
     loginUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  return NextResponse.next()
+  // IMPORTANT: return the supabase response so refreshed cookies are set
+  return response
 }
 
 export const config = {
