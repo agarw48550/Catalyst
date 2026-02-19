@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Mail } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/context'
 
 function LoginForm() {
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') || '/dashboard'
@@ -100,20 +102,32 @@ function LoginForm() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white/80 px-2 text-muted-foreground">Or continue with</span>
+                  <span className="bg-white/80 px-2 text-muted-foreground">{t('auth.orContinue')}</span>
                 </div>
               </div>
-              <div className="mt-4">
-                <Button variant="outline" type="button" className="w-full" onClick={handleGoogle}>
+              <div className="mt-6 space-y-3">
+                <Button variant="outline" type="button" className="w-full h-11 rounded-xl border-2 font-bold" onClick={handleGoogle}>
+                  <img src="/google.svg" className="h-4 w-4 mr-2" alt="" />
                   Google
                 </Button>
+                <Link href="/auth/magic-link" className="block">
+                  <Button variant="ghost" type="button" className="w-full h-11 rounded-xl font-bold text-slate-600">
+                    <Mail className="h-4 w-4 mr-2" />
+                    {t('auth.magic.title')}
+                  </Button>
+                </Link>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="text-sm text-center">
+              <Link href="/auth/reset-password" id="forgot-password-link" className="text-muted-foreground hover:text-primary transition-colors">
+                {t('auth.reset.title')}?
+              </Link>
+            </div>
             <div className="text-sm text-muted-foreground text-center">
-              Don&apos;t have an account?{' '}
-              <Link href="/auth/signup" className="text-primary hover:underline font-medium">Sign up</Link>
+              {t('auth.login.noAccount')}{' '}
+              <Link href="/auth/signup" className="text-primary hover:underline font-bold">{t('auth.login.signUp')}</Link>
             </div>
           </CardFooter>
         </Card>

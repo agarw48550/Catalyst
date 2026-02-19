@@ -145,6 +145,36 @@ export const translations = {
         'footer.contact': 'Contact',
         'footer.demo': 'Demo',
         'footer.copyright': '© 2025 Catalyst (RozgarSathi). All rights reserved.',
+
+        // Magic Link & Advanced Auth
+        'auth.magic.title': 'Magic Link Sign In',
+        'auth.magic.subtitle': 'Enter your email to receive a one-time sign-in link.',
+        'auth.magic.send': 'Send Magic Link',
+        'auth.magic.success': 'Magic link sent! Check your inbox.',
+        'auth.reset.title': 'Reset Password',
+        'auth.reset.subtitle': 'Enter your email to receive a password reset link.',
+        'auth.reset.send': 'Send Reset Link',
+        'auth.reset.success': 'Reset link sent! Check your inbox.',
+        'auth.updatePassword.title': 'Update Password',
+        'auth.updatePassword.subtitle': 'Enter your new password below.',
+        'auth.updatePassword.submit': 'Update Password',
+        'auth.updatePassword.success': 'Password updated successfully!',
+
+        // Settings
+        'settings.title': 'Settings',
+        'settings.subtitle': 'Manage your account and preferences',
+        'settings.profile.title': 'Profile Information',
+        'settings.account.title': 'Account Security',
+        'settings.email.label': 'Email Address',
+        'settings.email.update': 'Update Email',
+        'settings.password.label': 'New Password',
+        'settings.password.update': 'Update Password',
+        'settings.lang.label': 'Language Preference',
+        'settings.save': 'Save Changes',
+        'settings.invite.title': 'Invite Team Members',
+        'settings.invite.subtitle': 'Invite other users to join Catalyst',
+        'settings.invite.button': 'Send Invite',
+        'settings.invite.success': 'Invite sent successfully!',
     },
     hi: {
         // Nav
@@ -290,6 +320,36 @@ export const translations = {
         'footer.contact': 'संपर्क',
         'footer.demo': 'डेमो',
         'footer.copyright': '© 2025 Catalyst (रोज़गारसाथी)। सर्वाधिकार सुरक्षित।',
+
+        // Magic Link & Advanced Auth
+        'auth.magic.title': 'मैजिक लिंक लॉगिन',
+        'auth.magic.subtitle': 'वन-टाइम साइन-इन लिंक प्राप्त करने के लिए अपना ईमेल दर्ज करें।',
+        'auth.magic.send': 'मैजिक लिंक भेजें',
+        'auth.magic.success': 'मैजिक लिंक भेजा गया! अपना इनबॉक्स जांचें।',
+        'auth.reset.title': 'पासवर्ड रीसेट करें',
+        'auth.reset.subtitle': 'पासवर्ड रीसेट लिंक प्राप्त करने के लिए अपना ईमेल दर्ज करें।',
+        'auth.reset.send': 'रीसेट लिंक भेजें',
+        'auth.reset.success': 'रीसेट लिंक भेजा गया! अपना इनबॉक्स जांचें।',
+        'auth.updatePassword.title': 'पासवर्ड अपडेट करें',
+        'auth.updatePassword.subtitle': 'नीचे अपना नया पासवर्ड दर्ज करें।',
+        'auth.updatePassword.submit': 'पासवर्ड अपडेट करें',
+        'auth.updatePassword.success': 'पासवर्ड सफलतापूर्वक अपडेट किया गया!',
+
+        // Settings
+        'settings.title': 'सेटिंग्स',
+        'settings.subtitle': 'अपने खाते और प्राथमिकताओं को प्रबंधित करें',
+        'settings.profile.title': 'प्रोफ़ाइल जानकारी',
+        'settings.account.title': 'खाता सुरक्षा',
+        'settings.email.label': 'ईमेल पता',
+        'settings.email.update': 'ईमेल अपडेट करें',
+        'settings.password.label': 'नया पासवर्ड',
+        'settings.password.update': 'पासवर्ड अपडेट करें',
+        'settings.lang.label': 'भाषा प्राथमिकता',
+        'settings.save': 'परिवर्तन सहेजें',
+        'settings.invite.title': 'टीम के सदस्यों को आमंत्रित करें',
+        'settings.invite.subtitle': 'Catalyst में शामिल होने के लिए अन्य उपयोगकर्ताओं को आमंत्रित करें',
+        'settings.invite.button': 'आमंत्रण भेजें',
+        'settings.invite.success': 'आमंत्रण सफलतापूर्वक भेजा गया!',
     },
 } as const
 
