@@ -31,7 +31,7 @@ const taskConfig: Record<TaskType, Partial<GeminiRequest>> = {
     systemInstruction: 'You are a professional resume writer. Create clear, ATS-optimized content.',
   },
   'interview-questions': {
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     temperature: 0.7,
     maxTokens: 1024,
     systemInstruction: 'You are an experienced interviewer. Ask relevant, probing questions.',
@@ -43,7 +43,7 @@ const taskConfig: Record<TaskType, Partial<GeminiRequest>> = {
     systemInstruction: 'You are an interview coach. Provide constructive, actionable feedback.',
   },
   'job-matching': {
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     temperature: 0.2,
     maxTokens: 1024,
     systemInstruction: 'You are a career counselor. Match candidates with suitable job opportunities.',
@@ -55,7 +55,7 @@ const taskConfig: Record<TaskType, Partial<GeminiRequest>> = {
     systemInstruction: 'You are a career research expert. Provide insights on industries, trends, and opportunities.',
   },
   'chat': {
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     temperature: 0.8,
     maxTokens: 2048,
     systemInstruction: 'You are a helpful career assistant. Be conversational and supportive.',

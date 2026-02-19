@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AppHeader } from '@/components/app-header'
+import { FileText, Upload, Briefcase, X } from 'lucide-react'
 
 interface TailorResult {
   tailoredResume: string
@@ -16,6 +17,17 @@ interface TailorResult {
   missingSkills: string[]
   suggestions: string[]
   summary: string
+}
+
+interface SavedJob {
+  id: string
+  title: string
+  company: string
+  location: string
+  description: string
+  salary?: string
+  url: string
+  source: string
 }
 
 export default function ResumePage() {
@@ -27,6 +39,75 @@ export default function ResumePage() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<TailorResult | null>(null)
   const [copied, setCopied] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null)
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([])
+  const [showJobPicker, setShowJobPicker] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Load saved jobs from localStorage for import
+    try {
+      const jobs = JSON.parse(localStorage.getItem('savedJobs') || '[]')
+      setSavedJobs(jobs)
+    } catch { /* ignore */ }
+
+    // Check if a job was passed via URL params (cross-feature flow)
+    const params = new URLSearchParams(window.location.search)
+    const importJobId = params.get('importJob')
+    if (importJobId) {
+      try {
+        const jobs: SavedJob[] = JSON.parse(localStorage.getItem('savedJobs') || '[]')
+        const job = jobs.find((j) => j.id === importJobId)
+        if (job) {
+          setJobTitle(job.title)
+          setCompany(job.company)
+          setJobDescription(job.description)
+        }
+      } catch { /* ignore */ }
+    }
+  }, [])
+
+  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== 'application/pdf') {
+      setError('Please upload a PDF file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('PDF must be under 5MB')
+      return
+    }
+
+    setPdfLoading(true)
+    setError(null)
+    setPdfFileName(file.name)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/resume/parse-pdf', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to parse PDF')
+      }
+      const data = await res.json()
+      setResumeText(data.text)
+    } catch (err: any) {
+      setError(err.message)
+      setPdfFileName(null)
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
+  function importJob(job: SavedJob) {
+    setJobTitle(job.title)
+    setCompany(job.company)
+    setJobDescription(job.description)
+    setShowJobPicker(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,7 +123,12 @@ export default function ResumePage() {
         const err = await res.json()
         throw new Error(err.error || 'Failed to tailor resume')
       }
-      setResult(await res.json())
+      const data = await res.json()
+      setResult(data)
+
+      // Track usage
+      const count = parseInt(localStorage.getItem('catalyst_resume_count') || '0', 10)
+      localStorage.setItem('catalyst_resume_count', (count + 1).toString())
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -74,19 +160,82 @@ export default function ResumePage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Resume Input - Text or PDF */}
                   <div className="space-y-2">
-                    <Label htmlFor="resume">Your Resume</Label>
+                    <Label>Your Resume</Label>
+                    <div className="flex gap-2 mb-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={pdfLoading}
+                      >
+                        <Upload className="h-4 w-4" />
+                        {pdfLoading ? 'Parsing PDF...' : 'Upload PDF'}
+                      </Button>
+                      {pdfFileName && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {pdfFileName}
+                          <button type="button" onClick={() => { setPdfFileName(null); setResumeText('') }}>
+                            <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={handlePdfUpload}
+                    />
                     <textarea
                       id="resume"
                       className="w-full min-h-[200px] p-3 text-sm border rounded-md bg-background resize-y"
-                      placeholder="Paste your resume text here..."
+                      placeholder="Paste your resume text here, or upload a PDF above..."
                       value={resumeText}
                       onChange={(e) => setResumeText(e.target.value)}
                       required
                     />
                   </div>
+
+                  {/* Job Details with Import */}
                   <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Job Title</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="jobTitle">Job Title</Label>
+                      {savedJobs.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-1 h-7"
+                          onClick={() => setShowJobPicker(!showJobPicker)}
+                        >
+                          <Briefcase className="h-3 w-3" />
+                          Import from Saved Jobs
+                        </Button>
+                      )}
+                    </div>
+
+                    {showJobPicker && (
+                      <div className="border rounded-md p-2 space-y-1 max-h-40 overflow-y-auto bg-muted/50">
+                        {savedJobs.map((job) => (
+                          <button
+                            key={job.id}
+                            type="button"
+                            className="w-full text-left p-2 text-sm rounded hover:bg-primary/10 transition-colors"
+                            onClick={() => importJob(job)}
+                          >
+                            <span className="font-medium">{job.title}</span>
+                            <span className="text-muted-foreground"> at {job.company}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <Input
                       id="jobTitle"
                       placeholder="e.g. Software Engineer"

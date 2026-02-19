@@ -43,6 +43,10 @@ export default function ResearchPage() {
       }
       const data = await res.json()
       setHistory((prev) => [{ query: searchQuery, type: searchType, response: data.response }, ...prev])
+
+      // Track usage
+      const count = parseInt(localStorage.getItem('catalyst_research_count') || '0', 10)
+      localStorage.setItem('catalyst_research_count', (count + 1).toString())
     } catch (err: any) {
       setError(err.message)
     } finally {

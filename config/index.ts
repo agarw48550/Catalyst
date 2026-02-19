@@ -24,7 +24,7 @@ export const config = {
     apiKey: process.env.GEMINI_API_KEY || '',
     apiKeySecondary: process.env.GEMINI_API_KEY_SECONDARY || '',
     apiKeyTertiary: process.env.GEMINI_API_KEY_TERTIARY || '',
-    defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.0-flash',
+    defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash',
     flashModel: process.env.GEMINI_FLASH_MODEL || 'gemini-2.0-flash',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     // Fallback order for API keys
@@ -61,8 +61,8 @@ export const config = {
       apiKey: process.env.ADZUNA_API_KEY || '',
       apiUrl: process.env.ADZUNA_API_URL || 'https://api.adzuna.com/v1/api',
     },
-    // Fallback order for job APIs
-    fallbackOrder: ['ncs', 'jooble', 'adzuna'] as const,
+    // Fallback order for job APIs — Jooble first (most reliable), then Adzuna
+    fallbackOrder: ['jooble', 'adzuna'] as const,
     cacheEnabled: true,
     cacheTTL: 3600, // 1 hour in seconds
   },

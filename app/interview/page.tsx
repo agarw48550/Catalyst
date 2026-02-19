@@ -7,8 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { AppHeader } from '@/components/app-header'
+import { VoiceInterview } from '@/components/voice-interview'
+import { Mic, PenTool } from 'lucide-react'
 
 type Phase = 'setup' | 'interview' | 'review'
+type InterviewMode = 'written' | 'spoken'
 
 interface QuestionFeedback {
   question: string
@@ -26,6 +29,7 @@ interface FeedbackResult {
 
 export default function InterviewPage() {
   const [phase, setPhase] = useState<Phase>('setup')
+  const [mode, setMode] = useState<InterviewMode>('written')
   const [jobRole, setJobRole] = useState('')
   const [interviewType, setInterviewType] = useState('behavioral')
   const [questions, setQuestions] = useState<string[]>([])
@@ -91,6 +95,10 @@ export default function InterviewPage() {
       }
       setFeedback(await res.json())
       setPhase('review')
+
+      // Track usage
+      const count = parseInt(localStorage.getItem('catalyst_interview_count') || '0', 10)
+      localStorage.setItem('catalyst_interview_count', (count + 1).toString())
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -115,7 +123,7 @@ export default function InterviewPage() {
             </CardHeader>
             <CardContent>
               {error && <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-              <form onSubmit={startInterview} className="space-y-4">
+              <form onSubmit={mode === 'written' ? startInterview : (e) => { e.preventDefault(); setPhase('interview') }} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="jobRole">Job Role</Label>
                   <Input
@@ -143,15 +151,70 @@ export default function InterviewPage() {
                     ))}
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Generating Questions...' : 'Start Interview'}
+
+                {/* Mode Selector */}
+                <div className="space-y-2">
+                  <Label>Interview Mode</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMode('written')}
+                      className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                        mode === 'written'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <PenTool className={`h-5 w-5 ${mode === 'written' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div>
+                        <div className="font-medium text-sm">Written</div>
+                        <div className="text-xs text-muted-foreground">Type your answers</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode('spoken')}
+                      className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                        mode === 'spoken'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <Mic className={`h-5 w-5 ${mode === 'spoken' ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <div>
+                        <div className="font-medium text-sm">Spoken</div>
+                        <div className="text-xs text-muted-foreground">Talk via microphone</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading || !jobRole.trim()}>
+                  {loading ? 'Generating Questions...' : mode === 'spoken' ? 'Start Voice Interview' : 'Start Written Interview'}
                 </Button>
               </form>
             </CardContent>
           </Card>
         )}
 
-        {phase === 'interview' && questions.length > 0 && (
+        {phase === 'interview' && mode === 'spoken' && (
+          <div className="space-y-4">
+            <Button
+              onClick={() => { setPhase('setup'); setMode('written') }}
+              variant="ghost"
+              className="text-sm text-muted-foreground"
+            >
+              ← Back to setup
+            </Button>
+            <VoiceInterview
+              jobRole={jobRole}
+              interviewType={interviewType}
+              onComplete={() => { setPhase('setup') }}
+            />
+          </div>
+        )}
+
+        {phase === 'interview' && mode === 'written' && questions.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>Question {currentIndex + 1} of {questions.length}</span>
@@ -250,7 +313,7 @@ export default function InterviewPage() {
               </CardContent>
             </Card>
 
-            <Button onClick={() => { setPhase('setup'); setFeedback(null) }} variant="outline" className="w-full">
+            <Button onClick={() => { setPhase('setup'); setFeedback(null); setMode('written') }} variant="outline" className="w-full">
               Start New Interview
             </Button>
           </div>

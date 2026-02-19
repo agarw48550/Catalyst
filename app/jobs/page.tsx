@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Briefcase, ExternalLink, BookmarkPlus } from 'lucide-react'
+import { Briefcase, ExternalLink, BookmarkPlus, FileText } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 
 interface Job {
@@ -151,7 +151,7 @@ export default function JobsPage() {
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-3">
                     {job.description?.slice(0, 200)}{job.description?.length > 200 ? '...' : ''}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button size="sm" asChild>
                       <a href={job.url} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-4 w-4 mr-1" /> Apply
@@ -165,6 +165,17 @@ export default function JobsPage() {
                     >
                       <BookmarkPlus className="h-4 w-4 mr-1" />
                       {savedIds.has(job.id) ? 'Saved' : 'Save'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        saveJob(job)
+                        window.location.href = `/resume?importJob=${encodeURIComponent(job.id)}`
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Tailor Resume
                     </Button>
                   </div>
                 </CardContent>

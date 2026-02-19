@@ -98,14 +98,16 @@ async function searchJooble(params: JobSearchParams): Promise<Job[]> {
   const startTime = Date.now()
 
   try {
-    const response = await fetch(`${config.jobs.jooble.apiUrl}/${config.jobs.jooble.apiKey}`, {
+    // Jooble API: POST to https://jooble.org/api/{api_key}
+    const apiUrl = config.jobs.jooble.apiUrl.replace(/\/+$/, '')
+    const response = await fetch(`${apiUrl}/${config.jobs.jooble.apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         keywords: params.query,
-        location: params.location || '',
+        location: params.location || 'India',
         page: (params.page || 1).toString(),
       }),
     })
@@ -227,9 +229,6 @@ export async function searchJobs(params: JobSearchParams): Promise<Job[]> {
       let jobs: Job[]
       
       switch (source) {
-        case 'ncs':
-          jobs = await searchNCS(params)
-          break
         case 'jooble':
           jobs = await searchJooble(params)
           break
@@ -265,9 +264,6 @@ export async function searchJobsAggregated(params: JobSearchParams): Promise<Job
       let jobs: Job[]
       
       switch (source) {
-        case 'ncs':
-          jobs = await searchNCS(params)
-          break
         case 'jooble':
           jobs = await searchJooble(params)
           break

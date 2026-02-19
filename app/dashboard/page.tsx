@@ -11,10 +11,8 @@ import {
   Plus,
   ArrowUpRight,
   Target,
-  Users,
   Search,
   Zap,
-  LayoutDashboard,
   Settings
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -24,10 +22,34 @@ import { AppHeader } from '@/components/app-header'
 import { useLanguage } from '@/lib/i18n/context'
 import Link from 'next/link'
 
+function useRealStats() {
+  const [stats, setStats] = useState({ resumes: 0, interviews: 0, savedJobs: 0, researches: 0 })
+
+  useEffect(() => {
+    try {
+      const savedJobs = JSON.parse(localStorage.getItem('savedJobs') || '[]')
+      const resumeCount = parseInt(localStorage.getItem('catalyst_resume_count') || '0', 10)
+      const interviewCount = parseInt(localStorage.getItem('catalyst_interview_count') || '0', 10)
+      const researchCount = parseInt(localStorage.getItem('catalyst_research_count') || '0', 10)
+      setStats({
+        resumes: resumeCount,
+        interviews: interviewCount,
+        savedJobs: savedJobs.length,
+        researches: researchCount,
+      })
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  return stats
+}
+
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const { t } = useLanguage()
+  const stats = useRealStats()
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -56,12 +78,12 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats — real data from localStorage */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <StatCard label={t('dash.resumes')} value="12" icon={<FileText className="h-5 w-5" />} color="primary" />
-          <StatCard label={t('dash.interviews')} value="8" icon={<MessageSquare className="h-5 w-5" />} color="violet" />
-          <StatCard label={t('dash.savedJobs')} value="42" icon={<Target className="h-5 w-5" />} color="orange" />
-          <StatCard label={t('dash.profileViews')} value="1.2k" icon={<ArrowUpRight className="h-5 w-5" />} color="emerald" />
+          <StatCard label={t('dash.resumes')} value={stats.resumes.toString()} icon={<FileText className="h-5 w-5" />} color="primary" />
+          <StatCard label={t('dash.interviews')} value={stats.interviews.toString()} icon={<MessageSquare className="h-5 w-5" />} color="violet" />
+          <StatCard label={t('dash.savedJobs')} value={stats.savedJobs.toString()} icon={<Target className="h-5 w-5" />} color="orange" />
+          <StatCard label="Researches" value={stats.researches.toString()} icon={<TrendingUp className="h-5 w-5" />} color="emerald" />
         </div>
 
         {/* Grid of Tools */}
@@ -93,14 +115,6 @@ export default function DashboardPage() {
             icon={<TrendingUp className="h-8 w-8" />}
             href="/research"
             color="emerald"
-          />
-          <DashboardToolCard
-            title={t('dash.analytics')}
-            description={t('dash.analyticsDesc')}
-            icon={<LayoutDashboard className="h-8 w-8" />}
-            href="/analytics"
-            color="blue"
-            beta
           />
           <DashboardToolCard
             title={t('dash.settings')}

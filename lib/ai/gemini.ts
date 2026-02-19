@@ -7,24 +7,23 @@ import { logApiCall } from '@/lib/logger'
  */
 
 // Lazy client initialization — reads process.env at call time, not module-load time
-let _clients: Map<string, GoogleGenerativeAI> | null = null
-
+// Do NOT cache across invocations in serverless — env vars can differ between cold starts
 function getClients(): Map<string, GoogleGenerativeAI> {
-  if (_clients) return _clients
-  _clients = new Map<string, GoogleGenerativeAI>()
+  const clients = new Map<string, GoogleGenerativeAI>()
 
   const primary = process.env.GEMINI_API_KEY
   const secondary = process.env.GEMINI_API_KEY_SECONDARY
   const tertiary = process.env.GEMINI_API_KEY_TERTIARY
 
-  if (primary) _clients.set('primary', new GoogleGenerativeAI(primary))
-  if (secondary) _clients.set('secondary', new GoogleGenerativeAI(secondary))
-  if (tertiary) _clients.set('tertiary', new GoogleGenerativeAI(tertiary))
+  if (primary) clients.set('primary', new GoogleGenerativeAI(primary))
+  if (secondary) clients.set('secondary', new GoogleGenerativeAI(secondary))
+  if (tertiary) clients.set('tertiary', new GoogleGenerativeAI(tertiary))
 
-  return _clients
+  return clients
 }
 
 export type GeminiModel =
+  | 'gemini-2.5-flash'
   | 'gemini-2.5-pro'
   | 'gemini-2.0-flash'
   | 'gemini-2.0-flash-lite'
@@ -54,10 +53,16 @@ export async function generateContent(
 ): Promise<GeminiResponse> {
   const model = request.model || config.gemini.defaultModel as GeminiModel
   const startTime = Date.now()
+  const clients = getClients()
+
+  if (clients.size === 0) {
+    console.error('No Gemini API keys found in environment. GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET' : 'MISSING')
+    throw new Error('No Gemini API keys configured. Please set GEMINI_API_KEY in your environment variables.')
+  }
 
   // Try each API key in fallback order
   for (const keyType of config.gemini.fallbackOrder) {
-    const client = getClients().get(keyType)
+    const client = clients.get(keyType)
     if (!client) continue
 
     try {

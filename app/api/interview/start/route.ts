@@ -17,7 +17,7 @@ Return a JSON array of question strings only, like:
 
 No markdown, no code fences, just the raw JSON array.`
 
-    const result = await generateContent({ prompt, model: 'gemini-2.0-flash' })
+    const result = await generateContent({ prompt, model: 'gemini-2.5-flash' })
     let text = result.text.trim()
     if (text.startsWith('```')) {
       text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
