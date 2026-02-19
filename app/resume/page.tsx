@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AppHeader } from '@/components/app-header'
 
 interface TailorResult {
   tailoredResume: string
@@ -57,156 +58,159 @@ export default function ResumePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Resume Tailor</h1>
-        <p className="text-muted-foreground">Optimize your resume for specific job postings with AI</p>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="resume">Your Resume</Label>
-                  <textarea
-                    id="resume"
-                    className="w-full min-h-[200px] p-3 text-sm border rounded-md bg-background resize-y"
-                    placeholder="Paste your resume text here..."
-                    value={resumeText}
-                    onChange={(e) => setResumeText(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title</Label>
-                  <Input
-                    id="jobTitle"
-                    placeholder="e.g. Software Engineer"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company (optional)</Label>
-                  <Input
-                    id="company"
-                    placeholder="e.g. TCS, Infosys"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jobDesc">Job Description</Label>
-                  <textarea
-                    id="jobDesc"
-                    className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
-                    placeholder="Paste the job description here..."
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    required
-                  />
-                </div>
-                {error && (
-                  <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>
-                )}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Tailoring Resume...' : 'Tailor My Resume'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+    <>
+      <AppHeader />
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Resume Tailor</h1>
+          <p className="text-muted-foreground">Optimize your resume for specific job postings with AI</p>
         </div>
 
-        <div>
-          {loading && (
+        <div className="grid lg:grid-cols-2 gap-8">
+          <div>
             <Card>
-              <CardHeader><CardTitle>Processing...</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-32 w-full" />
+              <CardHeader>
+                <CardTitle>Your Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resume">Your Resume</Label>
+                    <textarea
+                      id="resume"
+                      className="w-full min-h-[200px] p-3 text-sm border rounded-md bg-background resize-y"
+                      placeholder="Paste your resume text here..."
+                      value={resumeText}
+                      onChange={(e) => setResumeText(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="jobTitle">Job Title</Label>
+                    <Input
+                      id="jobTitle"
+                      placeholder="e.g. Software Engineer"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company (optional)</Label>
+                    <Input
+                      id="company"
+                      placeholder="e.g. TCS, Infosys"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="jobDesc">Job Description</Label>
+                    <textarea
+                      id="jobDesc"
+                      className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
+                      placeholder="Paste the job description here..."
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {error && (
+                    <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>
+                  )}
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Tailoring Resume...' : 'Tailor My Resume'}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
-          )}
-          {result && !loading && (
-            <div className="space-y-4">
+          </div>
+
+          <div>
+            {loading && (
               <Card>
-                <CardHeader><CardTitle>ATS Score</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4">
-                    <Progress value={result.atsScore} className="flex-1" />
-                    <span className="text-2xl font-bold">{result.atsScore}%</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">{result.summary}</p>
+                <CardHeader><CardTitle>Processing...</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-32 w-full" />
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Tailored Resume</CardTitle>
-                  <Button variant="outline" size="sm" onClick={handleCopy}>
-                    {copied ? 'Copied!' : 'Copy'}
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <pre className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md max-h-64 overflow-y-auto">
-                    {result.tailoredResume}
-                  </pre>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-2 gap-4">
+            )}
+            {result && !loading && (
+              <div className="space-y-4">
                 <Card>
-                  <CardHeader><CardTitle className="text-sm text-green-600">Matched Skills</CardTitle></CardHeader>
+                  <CardHeader><CardTitle>ATS Score</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-1">
-                      {result.matchedSkills.map((skill) => (
-                        <span key={skill} className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{skill}</span>
-                      ))}
+                    <div className="flex items-center gap-4">
+                      <Progress value={result.atsScore} className="flex-1" />
+                      <span className="text-2xl font-bold">{result.atsScore}%</span>
                     </div>
+                    <p className="text-sm text-muted-foreground mt-2">{result.summary}</p>
                   </CardContent>
                 </Card>
+
                 <Card>
-                  <CardHeader><CardTitle className="text-sm text-orange-600">Missing Skills</CardTitle></CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Tailored Resume</CardTitle>
+                    <Button variant="outline" size="sm" onClick={handleCopy}>
+                      {copied ? 'Copied!' : 'Copy'}
+                    </Button>
+                  </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-1">
-                      {result.missingSkills.map((skill) => (
-                        <span key={skill} className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">{skill}</span>
+                    <pre className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md max-h-64 overflow-y-auto">
+                      {result.tailoredResume}
+                    </pre>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm text-green-600">Matched Skills</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-1">
+                        {result.matchedSkills.map((skill) => (
+                          <span key={skill} className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{skill}</span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader><CardTitle className="text-sm text-orange-600">Missing Skills</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-1">
+                        {result.missingSkills.map((skill) => (
+                          <span key={skill} className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">{skill}</span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader><CardTitle>Suggestions</CardTitle></CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1">
+                      {result.suggestions.map((s, i) => (
+                        <li key={i} className="text-sm flex gap-2">
+                          <span className="text-primary">•</span>
+                          {s}
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </CardContent>
                 </Card>
               </div>
-
+            )}
+            {!result && !loading && (
               <Card>
-                <CardHeader><CardTitle>Suggestions</CardTitle></CardHeader>
-                <CardContent>
-                  <ul className="space-y-1">
-                    {result.suggestions.map((s, i) => (
-                      <li key={i} className="text-sm flex gap-2">
-                        <span className="text-primary">•</span>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
+                <CardContent className="flex items-center justify-center h-64 text-muted-foreground">
+                  Fill in the form and click &quot;Tailor My Resume&quot; to get started
                 </CardContent>
               </Card>
-            </div>
-          )}
-          {!result && !loading && (
-            <Card>
-              <CardContent className="flex items-center justify-center h-64 text-muted-foreground">
-                Fill in the form and click &quot;Tailor My Resume&quot; to get started
-              </CardContent>
-            </Card>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

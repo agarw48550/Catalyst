@@ -40,7 +40,7 @@ export const config = {
     },
     resend: {
       apiKey: process.env.RESEND_API_KEY || '',
-      fromEmail: process.env.RESEND_FROM_EMAIL || 'noreply@catalyst.app',
+      fromEmail: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
     },
     // Fallback order: try Mailgun first, then Resend
     fallbackOrder: ['mailgun', 'resend'] as const,

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { AppHeader } from '@/components/app-header'
 
 type Phase = 'setup' | 'interview' | 'review'
 
@@ -98,160 +99,163 @@ export default function InterviewPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">AI Interview Coach</h1>
-        <p className="text-muted-foreground">Practice interviews and get AI-powered feedback</p>
-      </div>
-
-      {phase === 'setup' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Setup Your Interview</CardTitle>
-            <CardDescription>Configure your practice session</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-            <form onSubmit={startInterview} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="jobRole">Job Role</Label>
-                <Input
-                  id="jobRole"
-                  placeholder="e.g. Software Engineer, Product Manager"
-                  value={jobRole}
-                  onChange={(e) => setJobRole(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Interview Type</Label>
-                <div className="flex gap-4">
-                  {['behavioral', 'technical', 'hr'].map((type) => (
-                    <label key={type} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="interviewType"
-                        value={type}
-                        checked={interviewType === type}
-                        onChange={(e) => setInterviewType(e.target.value)}
-                      />
-                      <span className="capitalize text-sm">{type}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Generating Questions...' : 'Start Interview'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {phase === 'interview' && questions.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>Question {currentIndex + 1} of {questions.length}</span>
-            <span>{jobRole} • {interviewType}</span>
-          </div>
-          <Progress value={((currentIndex) / questions.length) * 100} />
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{questions[currentIndex]}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <textarea
-                className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
-                placeholder="Type your answer here..."
-                value={currentAnswer}
-                onChange={(e) => setCurrentAnswer(e.target.value)}
-              />
-              {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-              <Button
-                onClick={submitAnswer}
-                className="w-full"
-                disabled={loading || !currentAnswer.trim()}
-              >
-                {loading
-                  ? 'Getting Feedback...'
-                  : currentIndex < questions.length - 1
-                  ? 'Submit & Next Question'
-                  : 'Finish & Get Feedback'}
-              </Button>
-            </CardContent>
-          </Card>
+    <>
+      <AppHeader />
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">AI Interview Coach</h1>
+          <p className="text-muted-foreground">Practice interviews and get AI-powered feedback</p>
         </div>
-      )}
 
-      {phase === 'review' && feedback && (
-        <div className="space-y-6">
+        {phase === 'setup' && (
           <Card>
             <CardHeader>
-              <CardTitle>Overall Score</CardTitle>
+              <CardTitle>Setup Your Interview</CardTitle>
+              <CardDescription>Configure your practice session</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4">
-                <Progress value={feedback.overallScore} className="flex-1" />
-                <span className="text-2xl font-bold">{feedback.overallScore}%</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardHeader><CardTitle className="text-sm text-green-600">Strengths</CardTitle></CardHeader>
-              <CardContent>
-                <ul className="space-y-1">
-                  {feedback.strengths.map((s, i) => (
-                    <li key={i} className="text-sm flex gap-2"><span className="text-green-500">✓</span>{s}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm text-orange-600">Areas to Improve</CardTitle></CardHeader>
-              <CardContent>
-                <ul className="space-y-1">
-                  {feedback.weaknesses.map((w, i) => (
-                    <li key={i} className="text-sm flex gap-2"><span className="text-orange-500">!</span>{w}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader><CardTitle>Per-Question Feedback</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              {feedback.perQuestion.map((pq, i) => (
-                <div key={i} className="border-b pb-3 last:border-b-0">
-                  <p className="text-sm font-medium">{pq.question}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{pq.feedback}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Progress value={pq.score} className="w-24 h-2" />
-                    <span className="text-xs text-muted-foreground">{pq.score}%</span>
+              {error && <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
+              <form onSubmit={startInterview} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="jobRole">Job Role</Label>
+                  <Input
+                    id="jobRole"
+                    placeholder="e.g. Software Engineer, Product Manager"
+                    value={jobRole}
+                    onChange={(e) => setJobRole(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Interview Type</Label>
+                  <div className="flex gap-4">
+                    {['behavioral', 'technical', 'hr'].map((type) => (
+                      <label key={type} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="interviewType"
+                          value={type}
+                          checked={interviewType === type}
+                          onChange={(e) => setInterviewType(e.target.value)}
+                        />
+                        <span className="capitalize text-sm">{type}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
-              ))}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Generating Questions...' : 'Start Interview'}
+                </Button>
+              </form>
             </CardContent>
           </Card>
+        )}
 
-          <Card>
-            <CardHeader><CardTitle>Tips for Next Time</CardTitle></CardHeader>
-            <CardContent>
-              <ul className="space-y-1">
-                {feedback.tips.map((tip, i) => (
-                  <li key={i} className="text-sm flex gap-2"><span className="text-primary">•</span>{tip}</li>
+        {phase === 'interview' && questions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Question {currentIndex + 1} of {questions.length}</span>
+              <span>{jobRole} • {interviewType}</span>
+            </div>
+            <Progress value={((currentIndex) / questions.length) * 100} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{questions[currentIndex]}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <textarea
+                  className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
+                  placeholder="Type your answer here..."
+                  value={currentAnswer}
+                  onChange={(e) => setCurrentAnswer(e.target.value)}
+                />
+                {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
+                <Button
+                  onClick={submitAnswer}
+                  className="w-full"
+                  disabled={loading || !currentAnswer.trim()}
+                >
+                  {loading
+                    ? 'Getting Feedback...'
+                    : currentIndex < questions.length - 1
+                      ? 'Submit & Next Question'
+                      : 'Finish & Get Feedback'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {phase === 'review' && feedback && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Overall Score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Progress value={feedback.overallScore} className="flex-1" />
+                  <span className="text-2xl font-bold">{feedback.overallScore}%</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-sm text-green-600">Strengths</CardTitle></CardHeader>
+                <CardContent>
+                  <ul className="space-y-1">
+                    {feedback.strengths.map((s, i) => (
+                      <li key={i} className="text-sm flex gap-2"><span className="text-green-500">✓</span>{s}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-sm text-orange-600">Areas to Improve</CardTitle></CardHeader>
+                <CardContent>
+                  <ul className="space-y-1">
+                    {feedback.weaknesses.map((w, i) => (
+                      <li key={i} className="text-sm flex gap-2"><span className="text-orange-500">!</span>{w}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader><CardTitle>Per-Question Feedback</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {feedback.perQuestion.map((pq, i) => (
+                  <div key={i} className="border-b pb-3 last:border-b-0">
+                    <p className="text-sm font-medium">{pq.question}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{pq.feedback}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Progress value={pq.score} className="w-24 h-2" />
+                      <span className="text-xs text-muted-foreground">{pq.score}%</span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Button onClick={() => { setPhase('setup'); setFeedback(null) }} variant="outline" className="w-full">
-            Start New Interview
-          </Button>
-        </div>
-      )}
-    </div>
+            <Card>
+              <CardHeader><CardTitle>Tips for Next Time</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="space-y-1">
+                  {feedback.tips.map((tip, i) => (
+                    <li key={i} className="text-sm flex gap-2"><span className="text-primary">•</span>{tip}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Button onClick={() => { setPhase('setup'); setFeedback(null) }} variant="outline" className="w-full">
+              Start New Interview
+            </Button>
+          </div>
+        )}
+      </div>
+    </>
   )
 }

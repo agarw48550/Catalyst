@@ -6,20 +6,25 @@ import { logApiCall } from '@/lib/logger'
  * Gemini AI Client with multi-key fallback support
  */
 
-// Initialize clients for each API key
-const clients = new Map<string, GoogleGenerativeAI>()
+// Lazy client initialization — reads process.env at call time, not module-load time
+let _clients: Map<string, GoogleGenerativeAI> | null = null
 
-if (config.gemini.apiKey) {
-  clients.set('primary', new GoogleGenerativeAI(config.gemini.apiKey))
-}
-if (config.gemini.apiKeySecondary) {
-  clients.set('secondary', new GoogleGenerativeAI(config.gemini.apiKeySecondary))
-}
-if (config.gemini.apiKeyTertiary) {
-  clients.set('tertiary', new GoogleGenerativeAI(config.gemini.apiKeyTertiary))
+function getClients(): Map<string, GoogleGenerativeAI> {
+  if (_clients) return _clients
+  _clients = new Map<string, GoogleGenerativeAI>()
+
+  const primary = process.env.GEMINI_API_KEY
+  const secondary = process.env.GEMINI_API_KEY_SECONDARY
+  const tertiary = process.env.GEMINI_API_KEY_TERTIARY
+
+  if (primary) _clients.set('primary', new GoogleGenerativeAI(primary))
+  if (secondary) _clients.set('secondary', new GoogleGenerativeAI(secondary))
+  if (tertiary) _clients.set('tertiary', new GoogleGenerativeAI(tertiary))
+
+  return _clients
 }
 
-export type GeminiModel = 
+export type GeminiModel =
   | 'gemini-2.5-pro'
   | 'gemini-2.0-flash'
   | 'gemini-2.0-flash-lite'
@@ -49,14 +54,14 @@ export async function generateContent(
 ): Promise<GeminiResponse> {
   const model = request.model || config.gemini.defaultModel as GeminiModel
   const startTime = Date.now()
-  
+
   // Try each API key in fallback order
   for (const keyType of config.gemini.fallbackOrder) {
-    const client = clients.get(keyType)
+    const client = getClients().get(keyType)
     if (!client) continue
 
     try {
-      const generativeModel = client.getGenerativeModel({ 
+      const generativeModel = client.getGenerativeModel({
         model,
         systemInstruction: request.systemInstruction,
       })
@@ -91,7 +96,7 @@ export async function generateContent(
       }
     } catch (error: any) {
       console.error(`Gemini API error with ${keyType} key:`, error.message)
-      
+
       // Log failed attempt
       await logApiCall({
         service: 'gemini',
@@ -107,7 +112,7 @@ export async function generateContent(
       if (keyType === config.gemini.fallbackOrder[config.gemini.fallbackOrder.length - 1]) {
         throw new Error(`All Gemini API keys failed. Last error: ${error.message}`)
       }
-      
+
       // Otherwise, continue to next key
       console.log(`Trying next API key...`)
     }
@@ -123,7 +128,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const startTime = Date.now()
 
   for (const keyType of config.gemini.fallbackOrder) {
-    const client = clients.get(keyType)
+    const client = getClients().get(keyType)
     if (!client) continue
 
     try {
@@ -142,7 +147,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       return result.embedding.values
     } catch (error: any) {
       console.error(`Gemini embedding error with ${keyType} key:`, error.message)
-      
+
       await logApiCall({
         service: 'gemini',
         endpoint: 'embedding',
@@ -171,11 +176,11 @@ export async function* streamContent(
   const model = request.model || config.gemini.defaultModel as GeminiModel
 
   for (const keyType of config.gemini.fallbackOrder) {
-    const client = clients.get(keyType)
+    const client = getClients().get(keyType)
     if (!client) continue
 
     try {
-      const generativeModel = client.getGenerativeModel({ 
+      const generativeModel = client.getGenerativeModel({
         model,
         systemInstruction: request.systemInstruction,
       })
@@ -196,7 +201,7 @@ export async function* streamContent(
       return
     } catch (error: any) {
       console.error(`Gemini stream error with ${keyType} key:`, error.message)
-      
+
       if (keyType === config.gemini.fallbackOrder[config.gemini.fallbackOrder.length - 1]) {
         throw new Error(`All Gemini API keys failed for streaming. Last error: ${error.message}`)
       }
@@ -216,7 +221,7 @@ export async function checkApiHealth(): Promise<{
   const keys: { type: string; status: 'ok' | 'error' }[] = []
 
   for (const keyType of config.gemini.fallbackOrder) {
-    const client = clients.get(keyType)
+    const client = getClients().get(keyType)
     if (!client) {
       keys.push({ type: keyType, status: 'error' })
       continue
