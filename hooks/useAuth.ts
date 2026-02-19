@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -28,7 +26,7 @@ export function useAuth() {
     const supabase = getSupabaseBrowserClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-    router.push('/dashboard')
+    window.location.href = '/dashboard'
   }
 
   async function signUp(email: string, password: string, name: string) {
@@ -39,7 +37,7 @@ export function useAuth() {
       options: { data: { full_name: name } },
     })
     if (error) throw error
-    router.push('/dashboard')
+    window.location.href = '/dashboard'
   }
 
   async function signInWithGoogle() {
@@ -54,7 +52,7 @@ export function useAuth() {
   async function signOut() {
     const supabase = getSupabaseBrowserClient()
     await supabase.auth.signOut()
-    router.push('/')
+    window.location.href = '/'
   }
 
   return { user, loading, signIn, signUp, signInWithGoogle, signOut }

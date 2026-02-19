@@ -9,9 +9,14 @@ export function middleware(request: NextRequest) {
   const isProtected = protectedRoutes.some((route) => pathname.startsWith(route))
   if (!isProtected) return NextResponse.next()
 
-  // Check for Supabase session cookie (sb-*-auth-token)
-  const hasSession = request.cookies.getAll().some(
-    (cookie) => cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')
+  // Check for Supabase session cookies
+  // Supabase v2 stores tokens as chunked cookies: sb-<ref>-auth-token.0, .1, etc.
+  // Also check for the base cookie name and the code-verifier (PKCE flow)
+  const allCookies = request.cookies.getAll()
+  const hasSession = allCookies.some(
+    (cookie) =>
+      cookie.name.startsWith('sb-') &&
+      (cookie.name.includes('-auth-token') || cookie.name.includes('auth-token'))
   )
 
   if (!hasSession) {

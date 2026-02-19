@@ -1,17 +1,17 @@
 'use client'
 
-import { useLanguage } from '@/lib/i18n/context'
+import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
 import {
     FileText,
     MessageSquare,
     Zap,
     TrendingUp,
-    Sparkles,
     ShieldCheck,
     Globe,
-    Fingerprint
+    Fingerprint,
+    Briefcase,
+    ArrowLeft
 } from 'lucide-react'
-import { AppHeader } from '@/components/app-header'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -20,9 +20,39 @@ export default function FeaturesPage() {
 
     return (
         <div className="min-h-screen bg-slate-50 selection:bg-primary selection:text-white">
-            <AppHeader />
+            {/* Public Header */}
+            <header className="fixed top-0 w-full z-50 border-b bg-background/60 backdrop-blur-xl">
+                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <Link href="/" className="flex items-center space-x-2 group">
+                            <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 transform group-hover:rotate-6">
+                                <Briefcase className="h-6 w-6" />
+                            </div>
+                            <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                                Catalyst
+                            </span>
+                        </Link>
+                        <nav className="hidden md:flex items-center space-x-1">
+                            <Link href="/" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">
+                                <ArrowLeft className="h-4 w-4 inline mr-1" />
+                                Home
+                            </Link>
+                            <Link href="/about" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">{t('nav.about')}</Link>
+                        </nav>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <LanguageToggle />
+                        <Link href="/auth/login">
+                            <Button variant="ghost" className="font-semibold text-slate-600 hover:text-primary">{t('nav.login')}</Button>
+                        </Link>
+                        <Link href="/auth/signup">
+                            <Button className="font-bold shadow-lg shadow-primary/20">{t('nav.getStarted')}</Button>
+                        </Link>
+                    </div>
+                </div>
+            </header>
 
-            <main>
+            <main className="pt-16">
                 {/* Hero Section */}
                 <section className="py-24 bg-white border-b">
                     <div className="container mx-auto px-4 text-center max-w-4xl">

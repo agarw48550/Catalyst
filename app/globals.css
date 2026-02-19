@@ -165,4 +165,9 @@
   .gradient-bg-soft {
     background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #faf5ff 100%);
   }
+
+  /* Smooth page transitions */
+  .page-transition {
+    animation: fadeInUp 0.4s ease-out;
+  }
 }

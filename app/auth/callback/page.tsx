@@ -15,18 +15,27 @@ function CallbackHandler() {
     useEffect(() => {
         const code = searchParams.get('code')
         const type = searchParams.get('type')
+        const errorParam = searchParams.get('error')
+        const errorDescription = searchParams.get('error_description')
         const supabase = getSupabaseBrowserClient()
 
         async function handleCallback() {
             try {
+                // Handle error parameters from Supabase redirects
+                if (errorParam) {
+                    throw new Error(errorDescription || errorParam)
+                }
+
+                // PKCE flow: exchange code for session
                 if (code) {
                     const { error } = await supabase.auth.exchangeCodeForSession(code)
                     if (error) throw error
                 }
 
                 // Check if this is an email verification callback
-                const isEmailVerification = type === 'signup' || type === 'email'
+                const isEmailVerification = type === 'signup' || type === 'email' || type === 'magiclink'
 
+                // Check for existing session (may have been set by hash fragment auto-detection)
                 const { data: { session } } = await supabase.auth.getSession()
 
                 if (session) {
@@ -34,37 +43,37 @@ function CallbackHandler() {
                         setStatus('verified')
                         setMessage('Email verified successfully!')
                         setTimeout(() => {
-                            router.push('/dashboard')
-                            router.refresh()
-                        }, 2000)
+                            window.location.href = '/dashboard'
+                        }, 1500)
                     } else {
-                        router.push('/dashboard')
-                        router.refresh()
+                        // Hard navigation to ensure middleware picks up cookies
+                        window.location.href = '/dashboard'
                     }
-                } else {
-                    // Wait for auth state change
-                    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-                        if (session) {
-                            subscription.unsubscribe()
-                            if (isEmailVerification) {
-                                setStatus('verified')
-                                setMessage('Email verified successfully!')
-                                setTimeout(() => {
-                                    router.push('/dashboard')
-                                    router.refresh()
-                                }, 2000)
-                            } else {
-                                router.push('/dashboard')
-                                router.refresh()
-                            }
-                        }
-                    })
-                    setTimeout(() => {
-                        subscription.unsubscribe()
-                        setStatus('error')
-                        setErrorMsg('Authentication timed out. Please try signing in again.')
-                    }, 5000)
+                    return
                 }
+
+                // No session yet — wait for auth state change (handles hash fragment tokens)
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                    if (session) {
+                        subscription.unsubscribe()
+                        if (isEmailVerification) {
+                            setStatus('verified')
+                            setMessage('Email verified successfully!')
+                            setTimeout(() => {
+                                window.location.href = '/dashboard'
+                            }, 1500)
+                        } else {
+                            window.location.href = '/dashboard'
+                        }
+                    }
+                })
+
+                // Timeout after 8 seconds
+                setTimeout(() => {
+                    subscription.unsubscribe()
+                    setStatus('error')
+                    setErrorMsg('Authentication timed out. Please try signing in again.')
+                }, 8000)
             } catch (err: any) {
                 setStatus('error')
                 setErrorMsg(err.message || 'Authentication failed')

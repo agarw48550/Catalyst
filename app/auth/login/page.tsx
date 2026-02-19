@@ -29,8 +29,8 @@ function LoginForm() {
       const supabase = getSupabaseBrowserClient()
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      router.push(redirectTo)
-      router.refresh()
+      // Use hard navigation so the middleware picks up the fresh session cookie
+      window.location.href = redirectTo
     } catch (err: any) {
       setError(err.message || 'Login failed')
     } finally {

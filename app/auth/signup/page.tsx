@@ -37,8 +37,7 @@ export default function SignupPage() {
       })
       if (error) throw error
       if (data.session) {
-        router.push('/dashboard')
-        router.refresh()
+        window.location.href = '/dashboard'
       } else {
         setSuccess(true)
       }
