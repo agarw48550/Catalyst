@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { generateContent } from '@/lib/ai/gemini'
+import { smartGenerate } from '@/lib/ai/gemini'
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +26,7 @@ ${instruction}
 
 Provide a well-structured, detailed response in plain text (no markdown headers, use natural paragraphs).`
 
-    const result = await generateContent({ prompt, model: 'gemini-2.5-pro', maxTokens: 4096 })
+    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 4096 })
     return NextResponse.json({ response: result.text, query, type })
   } catch (error: any) {
     console.error('Research error:', error)

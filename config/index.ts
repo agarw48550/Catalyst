@@ -72,8 +72,20 @@ export const config = {
     openai: {
       apiKey: process.env.OPENAI_API_KEY || '',
     },
+    openrouter: {
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      // Free models on OpenRouter
+      defaultModel: 'deepseek/deepseek-r1-0528:free',
+      fallbackModel: 'meta-llama/llama-3.3-8b-instruct:free',
+    },
     huggingface: {
       apiKey: process.env.HUGGINGFACE_API_KEY || '',
+    },
+    deepseek: {
+      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      baseUrl: 'https://api.deepseek.com/v1',
+      defaultModel: 'deepseek-chat',
     },
     redis: {
       url: process.env.REDIS_URL || '',

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { generateContent } from '@/lib/ai/gemini'
+import { smartGenerate } from '@/lib/ai/gemini'
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +32,7 @@ Return a JSON object with EXACTLY this structure (no markdown, no code fences, j
   "summary": "A brief summary of changes made"
 }`
 
-    const result = await generateContent({ prompt, model: 'gemini-2.5-pro', maxTokens: 4096 })
+    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 4096 })
     let text = result.text.trim()
 
     // Strip markdown code fences if present

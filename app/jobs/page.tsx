@@ -37,12 +37,14 @@ export default function JobsPage() {
       const params = new URLSearchParams({ q: query })
       if (location) params.set('location', location)
       const res = await fetch(`/api/jobs/search?${params}`)
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Search failed')
-      }
       const data = await res.json()
-      setJobs(data.jobs)
+      if (!res.ok && !data.jobs) {
+        throw new Error(data.error || 'Search failed')
+      }
+      setJobs(data.jobs || [])
+      if (data.error && data.jobs?.length === 0) {
+        setError(`Job APIs are temporarily unavailable. Please try again shortly.`)
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { generateContent } from '@/lib/ai/gemini'
+import { smartGenerate } from '@/lib/ai/gemini'
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +28,7 @@ Return ONLY a JSON object (no markdown, no code fences):
   "tip": "One specific improvement tip"
 }`
 
-    const result = await generateContent({ prompt, model: 'gemini-2.5-flash', maxTokens: 512 })
+    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 512 })
     let text = result.text.trim()
     if (text.startsWith('```')) {
       text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')

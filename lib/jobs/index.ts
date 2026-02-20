@@ -100,7 +100,13 @@ async function searchJooble(params: JobSearchParams): Promise<Job[]> {
   try {
     // Jooble API: POST to https://jooble.org/api/{api_key}
     const apiUrl = config.jobs.jooble.apiUrl.replace(/\/+$/, '')
-    const response = await fetch(`${apiUrl}/${config.jobs.jooble.apiKey}`, {
+    const fullUrl = `${apiUrl}/${config.jobs.jooble.apiKey}`
+    console.log(`[Jooble] Calling: POST ${apiUrl}/***`)
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,13 +116,18 @@ async function searchJooble(params: JobSearchParams): Promise<Job[]> {
         location: params.location || 'India',
         page: (params.page || 1).toString(),
       }),
+      signal: controller.signal,
     })
 
+    clearTimeout(timeout)
+
     if (!response.ok) {
-      throw new Error(`Jooble API error: ${response.statusText}`)
+      const body = await response.text().catch(() => '')
+      throw new Error(`Jooble API error: ${response.status} ${response.statusText} - ${body}`)
     }
 
     const data = await response.json()
+    console.log(`[Jooble] Response keys: ${Object.keys(data).join(', ')}, jobs count: ${(data.jobs || []).length}`)
 
     await logApiCall({
       service: 'jooble',
@@ -173,13 +184,22 @@ async function searchAdzuna(params: JobSearchParams): Promise<Job[]> {
     }
     url.searchParams.set('results_per_page', (params.limit || 10).toString())
 
-    const response = await fetch(url.toString())
+    console.log(`[Adzuna] Calling: GET ${url.toString().replace(config.jobs.adzuna.apiKey, '***')}`)
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+
+    const response = await fetch(url.toString(), { signal: controller.signal })
+
+    clearTimeout(timeout)
 
     if (!response.ok) {
-      throw new Error(`Adzuna API error: ${response.statusText}`)
+      const body = await response.text().catch(() => '')
+      throw new Error(`Adzuna API error: ${response.status} ${response.statusText} - ${body}`)
     }
 
     const data = await response.json()
+    console.log(`[Adzuna] Response keys: ${Object.keys(data).join(', ')}, results count: ${(data.results || []).length}`)
 
     await logApiCall({
       service: 'adzuna',

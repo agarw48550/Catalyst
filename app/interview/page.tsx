@@ -53,6 +53,7 @@ export default function InterviewPage() {
   const [phase, setPhase] = useState<Phase>('setup')
   const [mode, setMode] = useState<InterviewMode>('written')
   const [jobRole, setJobRole] = useState('')
+  const [targetCompany, setTargetCompany] = useState('')
   const [interviewType, setInterviewType] = useState('behavioral')
   const [questions, setQuestions] = useState<string[]>([])
   const [answers, setAnswers] = useState<string[]>([])
@@ -93,7 +94,7 @@ export default function InterviewPage() {
       const res = await fetch('/api/interview/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobRole, interviewType, language: 'English' }),
+        body: JSON.stringify({ jobRole, targetCompany, interviewType, language: 'English' }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -261,6 +262,15 @@ export default function InterviewPage() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="targetCompany">Target Company <span className="text-muted-foreground text-xs">(optional — for company-specific questions)</span></Label>
+                  <Input
+                    id="targetCompany"
+                    placeholder="e.g. Google, Amazon, TCS, Infosys"
+                    value={targetCompany}
+                    onChange={(e) => setTargetCompany(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Interview Type</Label>
                   <div className="flex gap-4">
                     {['behavioral', 'technical', 'hr'].map((type) => (
@@ -402,8 +412,36 @@ export default function InterviewPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 rounded-lg border bg-muted/50 text-sm text-muted-foreground">
-                        Feedback unavailable for this answer.
+                      <div className="p-4 rounded-lg border bg-muted/50 text-sm text-muted-foreground flex items-center justify-between">
+                        <span>AI feedback couldn't be generated — this won't affect your final score.</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => {
+                            setFeedbackLoading(true)
+                            try {
+                              const res = await fetch('/api/interview/answer-feedback', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  question: questions[currentIndex],
+                                  answer: answers[currentIndex],
+                                  jobRole,
+                                  interviewType,
+                                }),
+                              })
+                              if (res.ok) {
+                                const fb = await res.json()
+                                const newFeedbacks = [...answerFeedbacks]
+                                newFeedbacks[currentIndex] = fb
+                                setAnswerFeedbacks(newFeedbacks)
+                              }
+                            } catch {} finally { setFeedbackLoading(false) }
+                          }}
+                          disabled={feedbackLoading}
+                        >
+                          {feedbackLoading ? 'Retrying...' : 'Retry'}
+                        </Button>
                       </div>
                     )}
 
