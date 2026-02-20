@@ -27,6 +27,12 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
   const audioQueueRef = useRef<ArrayBuffer[]>([])
   const isPlayingRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
+  const statusRef = useRef<ConnectionStatus>('idle')
+
+  // Keep statusRef in sync with state
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -98,6 +104,7 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
       wsRef.current = ws
 
       ws.onopen = () => {
+        console.log('WebSocket connected, sending setup...')
         // Send setup message
         const setupMsg = {
           setup: {
@@ -123,11 +130,21 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
+          console.log('WS message type:', Object.keys(data).join(', '))
 
           // Setup complete
           if (data.setupComplete) {
+            console.log('Setup complete, starting audio capture')
             setStatus('connected')
             startAudioCapture(ws, audioContext, stream)
+            return
+          }
+
+          // Handle errors from the server
+          if (data.error) {
+            console.error('Gemini Live API error:', data.error)
+            setError(`AI error: ${data.error.message || JSON.stringify(data.error)}`)
+            setStatus('error')
             return
           }
 
@@ -165,13 +182,15 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
         }
       }
 
-      ws.onerror = () => {
+      ws.onerror = (ev) => {
+        console.error('WebSocket error:', ev)
         setError('Connection error. Please check your internet and try again.')
         setStatus('error')
       }
 
       ws.onclose = (e) => {
-        if (status !== 'error') {
+        console.log('WebSocket closed:', e.code, e.reason)
+        if (statusRef.current !== 'error' && statusRef.current !== 'ended') {
           setStatus('ended')
         }
         cleanup()
@@ -181,7 +200,7 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
       setStatus('error')
       cleanup()
     }
-  }, [jobRole, interviewType, playAudioQueue, status])
+  }, [jobRole, interviewType, playAudioQueue])
 
   function startAudioCapture(ws: WebSocket, audioContext: AudioContext, stream: MediaStream) {
     const source = audioContext.createMediaStreamSource(stream)

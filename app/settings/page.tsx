@@ -187,18 +187,17 @@ function InviteSection({ t, toast }: { t: any; toast: any }) {
         if (!email) return
         setLoading(true)
         try {
-            const supabase = getSupabaseBrowserClient()
-            // Note: inviteUserByEmail is an admin method. In a typical client-side app, 
-            // you might need a server action or edge function if bypass_rls is not set.
-            // For this demo/setup, we'll try the standard auth invite.
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: window.location.origin + '/auth/signup',
-                    data: { invited_by: 'user' }
-                }
+            // Call our server-side invite API which uses Supabase admin
+            // auth.admin.inviteUserByEmail() — sends the built-in "You have been invited" email
+            const res = await fetch('/api/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
             })
-            if (error) throw error
+            const data = await res.json()
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to send invite')
+            }
             toast({
                 title: "Invite Sent",
                 description: t('settings.invite.success'),

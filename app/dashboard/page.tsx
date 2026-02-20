@@ -24,6 +24,7 @@ import Link from 'next/link'
 
 function useRealStats() {
   const [stats, setStats] = useState({ resumes: 0, interviews: 0, savedJobs: 0, researches: 0 })
+  const [reports, setReports] = useState<any[]>([])
 
   useEffect(() => {
     try {
@@ -31,25 +32,27 @@ function useRealStats() {
       const resumeCount = parseInt(localStorage.getItem('catalyst_resume_count') || '0', 10)
       const interviewCount = parseInt(localStorage.getItem('catalyst_interview_count') || '0', 10)
       const researchCount = parseInt(localStorage.getItem('catalyst_research_count') || '0', 10)
+      const interviewReports = JSON.parse(localStorage.getItem('catalyst_interview_reports') || '[]')
       setStats({
         resumes: resumeCount,
         interviews: interviewCount,
         savedJobs: savedJobs.length,
         researches: researchCount,
       })
+      setReports(interviewReports.slice(0, 5))
     } catch {
       // ignore
     }
   }, [])
 
-  return stats
+  return { stats, reports }
 }
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const { t } = useLanguage()
-  const stats = useRealStats()
+  const { stats, reports } = useRealStats()
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -124,6 +127,46 @@ export default function DashboardPage() {
             color="slate"
           />
         </div>
+
+        {/* Recent Interview Reports */}
+        {reports.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-black tracking-tight text-slate-900 mb-6">Recent Interview Reports</h2>
+            <div className="space-y-4">
+              {reports.map((rpt: any, i: number) => (
+                <Card key={rpt.id || i} className="border-0 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-slate-900">{rpt.jobRole}</h3>
+                        <p className="text-sm text-slate-500">
+                          {rpt.interviewType} • {rpt.date ? new Date(rpt.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">{rpt.executiveSummary?.slice(0, 120)}{(rpt.executiveSummary?.length || 0) > 120 ? '...' : ''}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-2xl font-black ${
+                          rpt.overallScore >= 80 ? 'text-green-600' :
+                          rpt.overallScore >= 60 ? 'text-amber-600' :
+                          'text-red-600'
+                        }`}>
+                          {rpt.overallScore}%
+                        </div>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          rpt.overallAssessment?.includes('Ready') ? 'bg-green-100 text-green-700' :
+                          rpt.overallAssessment?.includes('Practice') ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {rpt.overallAssessment}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

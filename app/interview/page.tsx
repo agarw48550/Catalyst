@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,10 +8,16 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { AppHeader } from '@/components/app-header'
 import { VoiceInterview } from '@/components/voice-interview'
-import { Mic, PenTool } from 'lucide-react'
+import { Mic, PenTool, Download, Loader2, CheckCircle, AlertCircle, Mail } from 'lucide-react'
 
-type Phase = 'setup' | 'interview' | 'review'
+type Phase = 'setup' | 'interview' | 'review' | 'report'
 type InterviewMode = 'written' | 'spoken'
+
+interface AnswerFeedback {
+  feedback: string
+  score: number
+  tip: string
+}
 
 interface QuestionFeedback {
   question: string
@@ -27,6 +33,22 @@ interface FeedbackResult {
   tips: string[]
 }
 
+interface InterviewReport {
+  id: string
+  date: string
+  jobRole: string
+  interviewType: string
+  overallScore: number
+  executiveSummary: string
+  performanceAnalysis: string
+  skillGaps: string[]
+  actionPlan: string[]
+  resources: string[]
+  overallAssessment: string
+  emailSent?: boolean
+  emailError?: string
+}
+
 export default function InterviewPage() {
   const [phase, setPhase] = useState<Phase>('setup')
   const [mode, setMode] = useState<InterviewMode>('written')
@@ -39,6 +61,29 @@ export default function InterviewPage() {
   const [feedback, setFeedback] = useState<FeedbackResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Per-answer feedback
+  const [answerFeedbacks, setAnswerFeedbacks] = useState<(AnswerFeedback | null)[]>([])
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [showingFeedback, setShowingFeedback] = useState(false)
+
+  // Report
+  const [report, setReport] = useState<InterviewReport | null>(null)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
+
+  // Load user email from Supabase
+  useEffect(() => {
+    async function loadEmail() {
+      try {
+        const { getSupabaseBrowserClient } = await import('@/lib/supabase-browser')
+        const supabase = getSupabaseBrowserClient()
+        const { data } = await supabase.auth.getUser()
+        if (data?.user?.email) setUserEmail(data.user.email)
+      } catch {}
+    }
+    loadEmail()
+  }, [])
 
   async function startInterview(e: React.FormEvent) {
     e.preventDefault()
@@ -57,8 +102,10 @@ export default function InterviewPage() {
       const data = await res.json()
       setQuestions(data.questions)
       setAnswers(new Array(data.questions.length).fill(''))
+      setAnswerFeedbacks(new Array(data.questions.length).fill(null))
       setCurrentIndex(0)
       setCurrentAnswer('')
+      setShowingFeedback(false)
       setPhase('interview')
     } catch (err: any) {
       setError(err.message)
@@ -67,16 +114,48 @@ export default function InterviewPage() {
     }
   }
 
-  function submitAnswer() {
+  async function submitAnswer() {
+    if (!currentAnswer.trim()) return
+
+    // Save the answer
     const newAnswers = [...answers]
     newAnswers[currentIndex] = currentAnswer
     setAnswers(newAnswers)
 
+    // Get per-answer feedback
+    setFeedbackLoading(true)
+    try {
+      const res = await fetch('/api/interview/answer-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: questions[currentIndex],
+          answer: currentAnswer,
+          jobRole,
+          interviewType,
+        }),
+      })
+      if (res.ok) {
+        const fb = await res.json()
+        const newFeedbacks = [...answerFeedbacks]
+        newFeedbacks[currentIndex] = fb
+        setAnswerFeedbacks(newFeedbacks)
+      }
+    } catch {
+      // Non-critical — continue without per-answer feedback
+    } finally {
+      setFeedbackLoading(false)
+      setShowingFeedback(true)
+    }
+  }
+
+  function nextQuestion() {
+    setShowingFeedback(false)
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1)
-      setCurrentAnswer(newAnswers[currentIndex + 1] || '')
+      setCurrentAnswer(answers[currentIndex + 1] || '')
     } else {
-      getFeedback(newAnswers)
+      getFeedback(answers)
     }
   }
 
@@ -104,6 +183,53 @@ export default function InterviewPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function generateReport() {
+    if (!feedback) return
+    setReportLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/interview/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questions,
+          answers,
+          jobRole,
+          interviewType,
+          feedback,
+          userEmail,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to generate report')
+      }
+      const rpt = await res.json()
+      setReport(rpt)
+      setPhase('report')
+
+      // Save to localStorage for dashboard
+      try {
+        const existing = JSON.parse(localStorage.getItem('catalyst_interview_reports') || '[]')
+        existing.unshift(rpt)
+        localStorage.setItem('catalyst_interview_reports', JSON.stringify(existing.slice(0, 20)))
+      } catch {}
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  function startOver() {
+    setPhase('setup')
+    setFeedback(null)
+    setReport(null)
+    setAnswerFeedbacks([])
+    setShowingFeedback(false)
+    setError(null)
   }
 
   return (
@@ -226,24 +352,72 @@ export default function InterviewPage() {
                 <CardTitle className="text-lg">{questions[currentIndex]}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <textarea
-                  className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
-                  placeholder="Type your answer here..."
-                  value={currentAnswer}
-                  onChange={(e) => setCurrentAnswer(e.target.value)}
-                />
+                {/* Answer input — hidden when showing feedback */}
+                {!showingFeedback && (
+                  <>
+                    <textarea
+                      className="w-full min-h-[150px] p-3 text-sm border rounded-md bg-background resize-y"
+                      placeholder="Type your answer here..."
+                      value={currentAnswer}
+                      onChange={(e) => setCurrentAnswer(e.target.value)}
+                    />
+                    <Button
+                      onClick={submitAnswer}
+                      className="w-full"
+                      disabled={feedbackLoading || !currentAnswer.trim()}
+                    >
+                      {feedbackLoading ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing your answer...</>
+                      ) : (
+                        'Submit Answer'
+                      )}
+                    </Button>
+                  </>
+                )}
+
+                {/* Per-answer feedback */}
+                {showingFeedback && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-slate-50 rounded-lg border">
+                      <p className="text-sm text-muted-foreground mb-2 font-medium">Your answer:</p>
+                      <p className="text-sm">{answers[currentIndex]}</p>
+                    </div>
+
+                    {answerFeedbacks[currentIndex] ? (
+                      <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-primary">AI Feedback</span>
+                          <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                            answerFeedbacks[currentIndex]!.score >= 80 ? 'bg-green-100 text-green-700' :
+                            answerFeedbacks[currentIndex]!.score >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {answerFeedbacks[currentIndex]!.score}%
+                          </span>
+                        </div>
+                        <p className="text-sm">{answerFeedbacks[currentIndex]!.feedback}</p>
+                        <div className="flex items-start gap-2 text-sm bg-white p-3 rounded-md border">
+                          <span className="text-primary mt-0.5">💡</span>
+                          <span>{answerFeedbacks[currentIndex]!.tip}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-lg border bg-muted/50 text-sm text-muted-foreground">
+                        Feedback unavailable for this answer.
+                      </div>
+                    )}
+
+                    <Button onClick={nextQuestion} className="w-full">
+                      {currentIndex < questions.length - 1 ? (
+                        <>Next Question →</>
+                      ) : (
+                        <>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />} Finish &amp; Get Overall Feedback</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
                 {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-                <Button
-                  onClick={submitAnswer}
-                  className="w-full"
-                  disabled={loading || !currentAnswer.trim()}
-                >
-                  {loading
-                    ? 'Getting Feedback...'
-                    : currentIndex < questions.length - 1
-                      ? 'Submit & Next Question'
-                      : 'Finish & Get Feedback'}
-                </Button>
               </CardContent>
             </Card>
           </div>
@@ -313,9 +487,143 @@ export default function InterviewPage() {
               </CardContent>
             </Card>
 
-            <Button onClick={() => { setPhase('setup'); setFeedback(null); setMode('written') }} variant="outline" className="w-full">
+            {/* Generate Full Report Button */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-6">
+                <div className="text-center space-y-3">
+                  <h3 className="text-lg font-semibold">Want a detailed performance report?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Get a comprehensive analysis with skill gap assessment, action plan, and recommended resources.
+                    {userEmail && ' The report will also be emailed to you.'}
+                  </p>
+                  {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
+                  <Button
+                    onClick={generateReport}
+                    disabled={reportLoading}
+                    className="px-8"
+                    size="lg"
+                  >
+                    {reportLoading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Report...</>
+                    ) : (
+                      <><Download className="mr-2 h-4 w-4" /> Generate Full Report</>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button onClick={startOver} variant="outline" className="w-full">
               Start New Interview
             </Button>
+          </div>
+        )}
+
+        {/* ─── REPORT PHASE ─── */}
+        {phase === 'report' && report && (
+          <div className="space-y-6">
+            {report.emailSent && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                <Mail className="h-4 w-4" />
+                Report emailed to {userEmail}
+              </div>
+            )}
+            {report.emailSent === false && (
+              <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                <AlertCircle className="h-4 w-4" />
+                Report generated but email could not be sent.
+              </div>
+            )}
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">{report.jobRole}</h2>
+                    <p className="text-muted-foreground capitalize">{report.interviewType} Interview</p>
+                    <p className="text-xs text-muted-foreground mt-1">{new Date(report.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold">{report.overallScore}%</div>
+                    <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                      report.overallAssessment?.includes('Ready') ? 'bg-green-100 text-green-700' :
+                      report.overallAssessment?.includes('Practice') ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {report.overallAssessment}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Executive Summary</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed">{report.executiveSummary}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Performance Analysis</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed">{report.performanceAnalysis}</p>
+              </CardContent>
+            </Card>
+
+            {report.skillGaps?.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-orange-600">Skill Gaps</CardTitle></CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {report.skillGaps.map((gap, i) => (
+                      <li key={i} className="text-sm flex gap-2">
+                        <span className="text-orange-500 mt-0.5">⚠</span>
+                        <span>{gap}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {report.actionPlan?.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-primary">Action Plan</CardTitle></CardHeader>
+                <CardContent>
+                  <ol className="space-y-3">
+                    {report.actionPlan.map((step, i) => (
+                      <li key={i} className="text-sm flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+            )}
+
+            {report.resources?.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle>Recommended Resources</CardTitle></CardHeader>
+                <CardContent>
+                  <ul className="space-y-1">
+                    {report.resources.map((r, i) => (
+                      <li key={i} className="text-sm flex gap-2"><span className="text-primary">📚</span>{r}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex gap-3">
+              <Button onClick={() => setPhase('review')} variant="outline" className="flex-1">
+                ← Back to Feedback
+              </Button>
+              <Button onClick={startOver} className="flex-1">
+                Start New Interview
+              </Button>
+            </div>
           </div>
         )}
       </div>

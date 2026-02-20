@@ -17,18 +17,56 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File must be under 5MB' }, { status: 400 })
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const arrayBuffer = await file.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString('base64')
 
-    // Dynamic import to avoid bundling issues
-    const pdfParseModule: any = await import('pdf-parse')
-    const pdfParse = pdfParseModule.default || pdfParseModule
-    const data = await pdfParse(buffer)
-
-    if (!data.text || data.text.trim().length === 0) {
-      return NextResponse.json({ error: 'Could not extract text from PDF. The file may be scanned/image-based.' }, { status: 422 })
+    // Use Gemini to extract text from PDF — avoids DOMMatrix/canvas issues
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_SECONDARY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
 
-    return NextResponse.json({ text: data.text.trim(), pages: data.numpages })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inlineData: {
+                  mimeType: 'application/pdf',
+                  data: base64,
+                },
+              },
+              {
+                text: 'Extract ALL text content from this resume PDF. Return ONLY the raw text content exactly as it appears, preserving the structure (headings, bullet points, sections). Do not add any commentary or formatting instructions.',
+              },
+            ],
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+          },
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const err = await response.json()
+      console.error('Gemini PDF parse error:', err)
+      throw new Error('Failed to extract text from PDF')
+    }
+
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+    if (!text || text.trim().length === 0) {
+      return NextResponse.json({ error: 'Could not extract text from PDF. The file may be empty or corrupted.' }, { status: 422 })
+    }
+
+    return NextResponse.json({ text: text.trim(), pages: 1 })
   } catch (error: any) {
     console.error('PDF parse error:', error)
     return NextResponse.json({ error: error.message || 'Failed to parse PDF' }, { status: 500 })
