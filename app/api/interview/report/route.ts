@@ -2,6 +2,20 @@ import { NextResponse } from 'next/server'
 import { smartGenerate } from '@/lib/ai/gemini'
 import { sendEmail } from '@/lib/mailers'
 
+function cleanAIResponse(text: string): string {
+  let cleaned = text.trim()
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  }
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+  const firstBrace = cleaned.indexOf('{')
+  const lastBrace = cleaned.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+  }
+  return cleaned
+}
+
 export async function POST(request: Request) {
   try {
     const { questions, answers, jobRole, interviewType, feedback, userEmail } = await request.json()
@@ -48,11 +62,15 @@ Return ONLY a JSON object (no markdown, no code fences):
 }`
 
     const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 4096 })
-    let text = result.text.trim()
-    if (text.startsWith('```')) {
-      text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    const text = cleanAIResponse(result.text)
+
+    let report
+    try {
+      report = JSON.parse(text)
+    } catch (parseError: any) {
+      console.error('Report JSON parse failed:', parseError.message, 'Text:', text.slice(0, 500))
+      return NextResponse.json({ error: 'AI returned invalid report format. Please try again.' }, { status: 500 })
     }
-    const report = JSON.parse(text)
 
     // Combine feedback + report into a complete report object
     const fullReport = {

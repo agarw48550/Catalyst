@@ -277,8 +277,9 @@ export default function ResumePage() {
           <div>
             {loading && (
               <Card>
-                <CardHeader><CardTitle>Processing...</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Tailoring Your Resume...</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">AI is analyzing your resume against the job description. This may take 15-30 seconds.</p>
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-32 w-full" />

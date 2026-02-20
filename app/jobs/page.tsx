@@ -28,6 +28,7 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null)
   const [jobs, setJobs] = useState<Job[] | null>(null)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  const [source, setSource] = useState<string>('api')
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -42,6 +43,7 @@ export default function JobsPage() {
         throw new Error(data.error || 'Search failed')
       }
       setJobs(data.jobs || [])
+      setSource(data.source || 'api')
       if (data.error && data.jobs?.length === 0) {
         setError(`Job APIs are temporarily unavailable. Please try again shortly.`)
       }
@@ -132,6 +134,11 @@ export default function JobsPage() {
 
         {jobs !== null && !loading && jobs.length > 0 && (
           <div className="space-y-4">
+            {source === 'ai-suggested' && (
+              <div className="p-3 text-sm bg-amber-50 text-amber-800 rounded-lg border border-amber-200">
+                🤖 These are <strong>AI-suggested listings</strong> based on your search. Click "Apply" to find similar openings on job portals.
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">{jobs.length} jobs found</p>
             {jobs.map((job) => (
               <Card key={job.id}>

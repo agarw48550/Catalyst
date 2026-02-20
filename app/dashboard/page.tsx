@@ -68,7 +68,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div className="space-y-1">
             <h1 className="text-4xl font-black tracking-tight text-slate-900 group">
-              {t('dash.welcome')}, <span className="gradient-text">{user?.email?.split('@')[0]}</span>
+              {t('dash.welcome')}, <span className="gradient-text">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
             </h1>
             <p className="text-slate-500 font-medium">
               {t('dash.subtitle')}

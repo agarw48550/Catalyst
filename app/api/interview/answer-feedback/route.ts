@@ -1,6 +1,20 @@
 import { NextResponse } from 'next/server'
 import { smartGenerate } from '@/lib/ai/gemini'
 
+function cleanAIResponse(text: string): string {
+  let cleaned = text.trim()
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  }
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+  const firstBrace = cleaned.indexOf('{')
+  const lastBrace = cleaned.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+  }
+  return cleaned
+}
+
 export async function POST(request: Request) {
   try {
     const { question, answer, jobRole, interviewType } = await request.json()
@@ -15,24 +29,17 @@ The candidate was asked this ${interviewType || 'behavioral'} interview question
 "${question}"
 
 Their answer was:
-"${answer}"
+"${answer.slice(0, 1500)}"
 
 Give brief, constructive feedback in 2-3 sentences. Include:
 1. What was good about the answer
 2. One specific improvement suggestion
 
-Return ONLY a JSON object (no markdown, no code fences):
-{
-  "feedback": "Your 2-3 sentence feedback here",
-  "score": 75,
-  "tip": "One specific improvement tip"
-}`
+IMPORTANT: Return ONLY valid JSON. No text before or after.
+{"feedback": "Your 2-3 sentence feedback here", "score": 75, "tip": "One specific improvement tip"}`
 
-    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 512 })
-    let text = result.text.trim()
-    if (text.startsWith('```')) {
-      text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
-    }
+    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 1024 })
+    const text = cleanAIResponse(result.text)
     const data = JSON.parse(text)
     return NextResponse.json(data)
   } catch (error: any) {

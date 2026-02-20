@@ -275,9 +275,11 @@ async function callDeepSeek(request: GeminiRequest): Promise<GeminiResponse> {
  * This is the main entry point — always use this instead of generateContent directly
  */
 export async function smartGenerate(request: GeminiRequest): Promise<GeminiResponse> {
+  let result: GeminiResponse | null = null
+
   // 1. Try Gemini (with key + model fallback)
   try {
-    return await generateContent(request)
+    result = await generateContent(request)
   } catch (geminiError: any) {
     console.warn(`Gemini failed: ${geminiError.message?.slice(0, 150)}`)
 
@@ -285,25 +287,31 @@ export async function smartGenerate(request: GeminiRequest): Promise<GeminiRespo
     if (!is429Error(geminiError)) {
       throw geminiError
     }
+
+    // 2. Try OpenRouter (free models)
+    try {
+      console.log('⚡ Falling back to OpenRouter...')
+      result = await callOpenRouter(request)
+    } catch (orError: any) {
+      console.warn(`OpenRouter failed: ${orError.message?.slice(0, 150)}`)
+
+      // 3. Try DeepSeek
+      try {
+        console.log('⚡ Falling back to DeepSeek...')
+        result = await callDeepSeek(request)
+      } catch (dsError: any) {
+        console.warn(`DeepSeek failed: ${dsError.message?.slice(0, 150)}`)
+        throw new Error('All AI providers exhausted (Gemini, OpenRouter, DeepSeek). Please try again later.')
+      }
+    }
   }
 
-  // 2. Try OpenRouter (free models)
-  try {
-    console.log('⚡ Falling back to OpenRouter...')
-    return await callOpenRouter(request)
-  } catch (orError: any) {
-    console.warn(`OpenRouter failed: ${orError.message?.slice(0, 150)}`)
+  // Strip DeepSeek R1 chain-of-thought <think> blocks from the response
+  if (result && result.text) {
+    result.text = result.text.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
   }
 
-  // 3. Try DeepSeek
-  try {
-    console.log('⚡ Falling back to DeepSeek...')
-    return await callDeepSeek(request)
-  } catch (dsError: any) {
-    console.warn(`DeepSeek failed: ${dsError.message?.slice(0, 150)}`)
-  }
-
-  throw new Error('All AI providers exhausted (Gemini, OpenRouter, DeepSeek). Please try again later.')
+  return result!
 }
 
 /**

@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server'
 import { smartGenerate } from '@/lib/ai/gemini'
 
+function cleanAIResponse(text: string): string {
+  let cleaned = text.trim()
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+  }
+  // Strip DeepSeek R1 chain-of-thought blocks
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+  // Find the JSON array
+  const firstBracket = cleaned.indexOf('[')
+  const lastBracket = cleaned.lastIndexOf(']')
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    cleaned = cleaned.slice(firstBracket, lastBracket + 1)
+  }
+  return cleaned
+}
+
 export async function POST(request: Request) {
   try {
     const { jobRole, targetCompany, interviewType, language } = await request.json()
@@ -33,13 +49,20 @@ ${language && language !== 'English' ? `- Questions should be in ${language}.` :
 Return ONLY a JSON array of 5 question strings. No markdown, no code fences, just raw JSON:
 ["Question 1?", "Question 2?", "Question 3?", "Question 4?", "Question 5?"]`
 
-    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', temperature: 0.9 })
-    let text = result.text.trim()
-    if (text.startsWith('```')) {
-      text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', temperature: 0.9, maxTokens: 4096 })
+    const text = cleanAIResponse(result.text)
+
+    try {
+      const questions: string[] = JSON.parse(text)
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error('Response was not an array of questions')
+      }
+      return NextResponse.json({ questions: questions.slice(0, 5) })
+    } catch (parseError: any) {
+      console.error('Interview start JSON parse failed:', parseError.message)
+      console.error('Raw text:', result.text.slice(0, 500))
+      return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
     }
-    const questions: string[] = JSON.parse(text)
-    return NextResponse.json({ questions })
   } catch (error: any) {
     console.error('Interview start error:', error)
     return NextResponse.json({ error: error.message || 'Failed to generate questions' }, { status: 500 })
