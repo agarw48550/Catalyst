@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight, Briefcase, FileText, MessageSquare, TrendingUp, Search, LogOut, LayoutDashboard, Globe } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const navItems = [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
@@ -46,6 +47,7 @@ export function AppHeader() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <ThemeToggle />
                     <LanguageToggle />
                     <div className="h-6 w-[1px] bg-border mx-1 hidden sm:block"></div>
                     <Button

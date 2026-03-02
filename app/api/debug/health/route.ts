@@ -1,7 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkApiHealth } from '@/lib/ai/gemini'
+import { config } from '@/config'
 
 export const dynamic = 'force-dynamic'
+
+function getEmailProviderStatus() {
+  const providers: Record<string, any> = {}
+
+  if (config.email.resend.apiKey) {
+    providers.resend = {
+      configured: true,
+      fromEmail: config.email.resend.fromEmail,
+      isDefaultFrom: config.email.resend.fromEmail === 'onboarding@resend.dev',
+      warning: config.email.resend.fromEmail === 'onboarding@resend.dev'
+        ? 'Using default FROM address — can only send to your own verified email'
+        : null,
+    }
+  } else {
+    providers.resend = { configured: false }
+  }
+
+  if (config.email.mailgun.apiKey) {
+    providers.mailgun = {
+      configured: true,
+      domain: config.email.mailgun.domain || 'NOT SET',
+      fromEmail: config.email.mailgun.fromEmail,
+      isDefaultFrom: config.email.mailgun.fromEmail === 'noreply@catalyst.app',
+    }
+  } else {
+    providers.mailgun = { configured: false }
+  }
+
+  return providers
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,9 +45,16 @@ export async function GET(request: NextRequest) {
     }
 
     const health = await checkApiHealth()
+    const emailProviders = getEmailProviderStatus()
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       gemini: health,
+      email: emailProviders,
+      supabase: {
+        urlConfigured: !!config.supabase.url,
+        anonKeyConfigured: !!config.supabase.anonKey,
+        serviceRoleKeyConfigured: !!config.supabase.serviceRoleKey,
+      },
       timestamp: new Date().toISOString(),
     })
   } catch (error: any) {

@@ -1,4 +1,4 @@
-export type Language = 'en' | 'hi'
+export type Language = 'en' | 'hi' | 'mr'
 
 export const translations = {
     en: {
@@ -350,6 +350,181 @@ export const translations = {
         'settings.invite.subtitle': 'Catalyst में शामिल होने के लिए अन्य उपयोगकर्ताओं को आमंत्रित करें',
         'settings.invite.button': 'आमंत्रण भेजें',
         'settings.invite.success': 'आमंत्रण सफलतापूर्वक भेजा गया!',
+    },
+    mr: {
+        // Nav
+        'nav.dashboard': 'डॅशबोर्ड',
+        'nav.resume': 'रेझ्युमे',
+        'nav.interview': 'मुलाखत',
+        'nav.jobs': 'नोकऱ्या',
+        'nav.research': 'संशोधन',
+        'nav.logout': 'लॉगआउट',
+        'nav.about': 'आमच्याबद्दल',
+        'nav.features': 'वैशिष्ट्ये',
+        'nav.login': 'लॉगिन',
+        'nav.getStarted': 'सुरू करा',
+        'nav.free': '100% मोफत',
+
+        // Landing
+        'hero.title1': 'तुमचा AI-संचालित',
+        'hero.title2': 'करिअर साथी',
+        'hero.subtitle': 'बुद्धिमान रेझ्युमे निर्मिती, AI-संचालित मुलाखत सराव, आणि भारतीय बाजारपेठेसाठी वैयक्तिक नोकरी शिफारसींसह तुमची नोकरी शोध बदला.',
+        'hero.cta': 'तुमचा प्रवास सुरू करा',
+        'hero.demo': 'वैशिष्ट्ये पहा',
+        'hero.badge': 'AI-संचालित करिअर प्लॅटफॉर्म',
+
+        // Features
+        'features.title': 'यशस्वी होण्यासाठी सर्वकाही',
+        'features.subtitle': 'आधुनिक भारतीय नोकरी शोधकांसाठी शक्तिशाली AI साधने',
+        'features.resume.title': 'स्मार्ट रेझ्युमे बिल्डर',
+        'features.resume.desc': 'AI-संचालित सूचना आणि रिअल-टाइम स्कोअरिंगसह ATS-अनुकूलित रेझ्युमे तयार करा.',
+        'features.interview.title': 'AI मुलाखत प्रशिक्षक',
+        'features.interview.desc': 'आमच्या AI मुलाखतकाराशी सराव करा आणि तपशीलवार अभिप्राय मिळवा.',
+        'features.jobs.title': 'नोकरी एकत्रीकरण',
+        'features.jobs.desc': 'NCS, Jooble आणि Adzuna वरून हजारो नोकऱ्या एकाच ठिकाणी शोधा.',
+        'features.research.title': 'करिअर संशोधन',
+        'features.research.desc': 'करिअर ट्रेंड्स, कौशल्ये आणि उद्योग विश्लेषणावर AI-संचालित माहिती मिळवा.',
+
+        // CTA
+        'cta.title': 'तुमचे करिअर वेगवान करण्यास तयार आहात?',
+        'cta.subtitle': 'हजारो नोकरी शोधकांमध्ये सामील व्हा ज्यांनी Catalyst सह यश मिळवले आहे. पूर्णपणे मोफत, क्रेडिट कार्ड नाही.',
+        'cta.button': 'मोफत सुरू करा',
+
+        // Auth
+        'auth.backHome': 'मुख्यपृष्ठावर परत जा',
+        'auth.login.title': 'पुन्हा स्वागत',
+        'auth.login.subtitle': 'तुमच्या खात्यात प्रवेश करण्यासाठी तुमची माहिती टाका',
+        'auth.login.submit': 'साइन इन करा',
+        'auth.login.loading': 'साइन इन होत आहे...',
+        'auth.login.noAccount': 'खाते नाही?',
+        'auth.login.signUp': 'साइन अप करा',
+        'auth.signup.title': 'खाते तयार करा',
+        'auth.signup.subtitle': 'तुमचा AI-संचालित करिअर प्रवास सुरू करा',
+        'auth.signup.submit': 'खाते तयार करा',
+        'auth.signup.loading': 'खाते तयार होत आहे...',
+        'auth.signup.hasAccount': 'आधीच खाते आहे?',
+        'auth.signup.signIn': 'साइन इन करा',
+        'auth.orContinue': 'किंवा यासह सुरू ठेवा',
+        'auth.email': 'ईमेल',
+        'auth.password': 'पासवर्ड',
+        'auth.confirmPassword': 'पासवर्डची पुष्टी करा',
+        'auth.fullName': 'पूर्ण नाव',
+        'auth.checkEmail': 'तुमचा ईमेल तपासा!',
+        'auth.verifyMsg': 'आम्ही सत्यापन लिंक पाठवली आहे',
+        'auth.spamHint': 'मिळाले नाही? तुमचा स्पॅम फोल्डर तपासा किंवा',
+        'auth.tryAgain': 'पुन्हा प्रयत्न करा',
+
+        // Callback
+        'callback.completing': 'साइन-इन पूर्ण होत आहे…',
+        'callback.verified': 'ईमेल यशस्वीरित्या सत्यापित!',
+        'callback.redirecting': 'डॅशबोर्डवर पाठवत आहोत…',
+        'callback.timeout': 'प्रमाणीकरणाची वेळ संपली. कृपया पुन्हा साइन इन करा.',
+        'callback.backLogin': 'लॉगिनवर परत जा',
+
+        // Dashboard
+        'dash.welcome': 'पुन्हा स्वागत',
+        'dash.subtitle': 'तुमच्या करिअर प्रवासात काय चालू आहे',
+        'dash.resumes': 'रेझ्युमे',
+        'dash.interviews': 'मुलाखती',
+        'dash.savedJobs': 'जतन केलेल्या नोकऱ्या',
+        'dash.profileViews': 'प्रोफाइल दृश्ये',
+        'dash.resumeBuilder': 'रेझ्युमे बिल्डर',
+        'dash.resumeDesc': 'AI-संचालित सूचनांसह तुमचा रेझ्युमे तयार करा आणि अनुकूलित करा',
+        'dash.interviewPractice': 'मुलाखत सराव',
+        'dash.interviewDesc': 'आमच्या AI मुलाखतकाराशी सराव करा',
+        'dash.jobSearch': 'नोकरी शोध',
+        'dash.jobDesc': 'शीर्ष भारतीय जॉब बोर्ड्सवरून नोकऱ्या शोधा',
+        'dash.careerResearch': 'करिअर संशोधन',
+        'dash.researchDesc': 'उद्योग आणि करिअर मार्गांवर AI-संचालित माहिती',
+        'dash.analytics': 'विश्लेषण',
+        'dash.analyticsDesc': 'तुमची प्रगती ट्रॅक करा',
+        'dash.settings': 'सेटिंग्ज',
+        'dash.settingsDesc': 'तुमचे प्रोफाइल आणि प्राधान्ये व्यवस्थापित करा',
+
+        // Resume Page
+        'resume.title': 'रेझ्युमे टेलर',
+        'resume.subtitle': 'तुमचा रेझ्युमे आणि जॉब वर्णन पेस्ट करा',
+        'resume.inputLabel': 'तुमचा रेझ्युमे',
+        'resume.jdLabel': 'जॉब वर्णन',
+        'resume.submit': 'रेझ्युमे तयार करा',
+        'resume.loading': 'तयार होत आहे...',
+
+        // Interview Page
+        'interview.title': 'AI मुलाखत प्रशिक्षक',
+        'interview.subtitle': 'आमच्या AI प्रशिक्षकाशी मुलाखतीचा सराव करा',
+
+        // Jobs Page
+        'jobs.title': 'नोकरी शोध',
+        'jobs.subtitle': 'अनेक भारतीय जॉब बोर्ड्सवरून हजारो नोकऱ्या शोधा',
+
+        // Research Page
+        'research.title': 'करिअर संशोधन',
+        'research.subtitle': 'कंपन्या, उद्योग आणि करिअर मार्गांवर AI-संचालित माहिती',
+
+        // About Page
+        'about.title': 'Catalyst बद्दल',
+        'about.mission.title': 'आमचे ध्येय',
+        'about.mission.text': 'Catalyst (रोज़गारसाथी) प्रत्येक भारतीय नोकरी शोधकासाठी करिअर वाढ लोकशाही बनवण्यासाठी तयार केले आहे. आम्हाला विश्वास आहे की AI-संचालित साधने सर्वांसाठी उपलब्ध असली पाहिजेत.',
+        'about.vision.title': 'आमची दृष्टी',
+        'about.vision.text': 'एक भविष्य जिथे भारतातील प्रत्येक नोकरी शोधकाला तेच दर्जेदार करिअर साधने उपलब्ध असतील.',
+        'about.stats.users': 'सक्रिय वापरकर्ते',
+        'about.stats.resumes': 'रेझ्युमे तयार केले',
+        'about.stats.interviews': 'मुलाखत सराव',
+        'about.stats.jobs': 'नोकऱ्या एकत्रित',
+        'about.founder': 'निर्माता',
+        'about.founderName': 'अयान अग्रवाल',
+        'about.founderRole': 'संस्थापक आणि विकसक',
+        'about.tech': 'अत्याधुनिक AI द्वारे संचालित',
+        'about.techDesc': 'जलद, बुद्धिमान आणि विश्वसनीय अनुभव देण्यासाठी Next.js, Google Gemini AI आणि Supabase सह तयार.',
+
+        // Features Page
+        'featuresPage.title': 'शक्तिशाली वैशिष्ट्ये',
+        'featuresPage.subtitle': 'तुमच्या स्वप्नातील नोकरी मिळवण्यासाठी सर्वकाही, पूर्णपणे मोफत',
+        'featuresPage.resume.detail': 'आमची AI तुमच्या रेझ्युमेचे जॉब वर्णनानुसार विश्लेषण करते, ATS सुसंगतता स्कोअर मोजते आणि अनुकूलित आवृत्ती तयार करते.',
+        'featuresPage.interview.detail': 'तुमची लक्ष्य भूमिका आणि मुलाखत प्रकार निवडा, नंतर AI-निर्मित प्रश्नांसह सराव करा. प्रत्येक उत्तरावर तपशीलवार अभिप्राय मिळवा.',
+        'featuresPage.jobs.detail': 'NCS, Jooble आणि Adzuna मध्ये एकाच वेळी शोधा. स्थान, भूमिका आणि अनुभव पातळीनुसार फिल्टर करा.',
+        'featuresPage.research.detail': 'कंपन्या, उद्योग, पगार मानके आणि करिअर मार्गांवर संशोधन करा. AI-संश्लेषित माहिती मिळवा.',
+
+        // Footer
+        'footer.tagline': 'AI तंत्रज्ञानाने करिअर सक्षम करणे',
+        'footer.product': 'उत्पादन',
+        'footer.company': 'कंपनी',
+        'footer.legal': 'कायदेशीर',
+        'footer.privacy': 'गोपनीयता',
+        'footer.terms': 'अटी',
+        'footer.contact': 'संपर्क',
+        'footer.demo': 'डेमो',
+        'footer.copyright': '© 2025 Catalyst (रोज़गारसाथी). सर्व हक्क राखीव.',
+
+        // Magic Link & Advanced Auth
+        'auth.magic.title': 'मॅजिक लिंक लॉगिन',
+        'auth.magic.subtitle': 'एक-वेळ साइन-इन लिंक मिळवण्यासाठी तुमचा ईमेल टाका.',
+        'auth.magic.send': 'मॅजिक लिंक पाठवा',
+        'auth.magic.success': 'मॅजिक लिंक पाठवली गेली! तुमचा इनबॉक्स तपासा.',
+        'auth.reset.title': 'पासवर्ड रीसेट करा',
+        'auth.reset.subtitle': 'पासवर्ड रीसेट लिंक मिळवण्यासाठी तुमचा ईमेल टाका.',
+        'auth.reset.send': 'रीसेट लिंक पाठवा',
+        'auth.reset.success': 'रीसेट लिंक पाठवली गेली! तुमचा इनबॉक्स तपासा.',
+        'auth.updatePassword.title': 'पासवर्ड अपडेट करा',
+        'auth.updatePassword.subtitle': 'खाली तुमचा नवीन पासवर्ड टाका.',
+        'auth.updatePassword.submit': 'पासवर्ड अपडेट करा',
+        'auth.updatePassword.success': 'पासवर्ड यशस्वीरित्या अपडेट केला!',
+
+        // Settings
+        'settings.title': 'सेटिंग्ज',
+        'settings.subtitle': 'तुमचे खाते आणि प्राधान्ये व्यवस्थापित करा',
+        'settings.profile.title': 'प्रोफाइल माहिती',
+        'settings.account.title': 'खाते सुरक्षा',
+        'settings.email.label': 'ईमेल पत्ता',
+        'settings.email.update': 'ईमेल अपडेट करा',
+        'settings.password.label': 'नवीन पासवर्ड',
+        'settings.password.update': 'पासवर्ड अपडेट करा',
+        'settings.lang.label': 'भाषा प्राधान्य',
+        'settings.save': 'बदल जतन करा',
+        'settings.invite.title': 'टीम सदस्यांना आमंत्रित करा',
+        'settings.invite.subtitle': 'Catalyst मध्ये सामील होण्यासाठी इतर वापरकर्त्यांना आमंत्रित करा',
+        'settings.invite.button': 'आमंत्रण पाठवा',
+        'settings.invite.success': 'आमंत्रण यशस्वीरित्या पाठवले!',
     },
 } as const
 

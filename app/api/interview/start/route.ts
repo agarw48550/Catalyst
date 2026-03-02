@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { smartGenerate } from '@/lib/ai/gemini'
+import { interviewStartSchema } from '@/lib/validations'
 
 function cleanAIResponse(text: string): string {
   let cleaned = text.trim()
@@ -19,11 +20,12 @@ function cleanAIResponse(text: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { jobRole, targetCompany, interviewType, language } = await request.json()
-
-    if (!jobRole || !interviewType) {
-      return NextResponse.json({ error: 'jobRole and interviewType are required' }, { status: 400 })
+    const raw = await request.json()
+    const parsed = interviewStartSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 })
     }
+    const { jobRole, targetCompany, interviewType, language } = parsed.data
 
     const companyContext = targetCompany
       ? `\nCOMPANY CONTEXT: The candidate is preparing for an interview at "${targetCompany}".

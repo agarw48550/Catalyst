@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { smartGenerate } from '@/lib/ai/gemini'
+import { resumeTailorSchema } from '@/lib/validations'
 
 function cleanAIResponse(text: string): string {
   let cleaned = text.trim()
@@ -20,12 +21,12 @@ function cleanAIResponse(text: string): string {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { resumeText, jobTitle, company, jobDescription } = body
-
-    if (!resumeText || !jobDescription) {
-      return NextResponse.json({ error: 'resumeText and jobDescription are required' }, { status: 400 })
+    const raw = await request.json()
+    const parsed = resumeTailorSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 })
     }
+    const { resumeText, jobTitle, company, jobDescription } = parsed.data
 
     // Truncate inputs to prevent extremely long prompts
     const truncatedResume = resumeText.slice(0, 4000)

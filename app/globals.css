@@ -59,6 +59,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Accessibility: visible focus ring for keyboard navigation */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring rounded-sm;
+  }
 }
 
 /* Animations */

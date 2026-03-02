@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server'
 import { smartGenerate } from '@/lib/ai/gemini'
+import { researchSchema } from '@/lib/validations'
 
 export async function POST(request: Request) {
   try {
-    const { query, type } = await request.json()
-
-    if (!query) {
-      return NextResponse.json({ error: 'query is required' }, { status: 400 })
+    const raw = await request.json()
+    const parsed = researchSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 })
     }
+    const { query, type } = parsed.data
 
-    // Sanitize input — only allow reasonable query lengths
-    const sanitizedQuery = query.trim().slice(0, 500)
+    // sanitizedQuery is already cleaned by Zod
+    const sanitizedQuery = query
 
     const typeInstructions: Record<string, string> = {
       company: `Provide a concise company research report covering:
@@ -57,7 +59,10 @@ RULES:
 - If the query is not career-related, politely redirect to career topics`
 
     const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 2048 })
-    return NextResponse.json({ response: result.text, query: sanitizedQuery, type })
+    return NextResponse.json(
+      { response: result.text, query: sanitizedQuery, type },
+      { headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200' } }
+    )
   } catch (error: any) {
     console.error('Research error:', error)
     return NextResponse.json({ error: error.message || 'Research failed' }, { status: 500 })

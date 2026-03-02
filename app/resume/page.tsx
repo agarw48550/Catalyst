@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AppHeader } from '@/components/app-header'
-import { FileText, Upload, Briefcase, X } from 'lucide-react'
+import { FileText, Upload, Briefcase, X, Download } from 'lucide-react'
 
 interface TailorResult {
   tailoredResume: string
@@ -143,10 +143,35 @@ export default function ResumePage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function handleDownloadPdf() {
+    if (!result) return
+    // Open a new window with the tailored resume formatted for printing
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Tailored Resume${jobTitle ? ' - ' + jobTitle : ''}</title>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #1a1a1a; font-size: 11pt; }
+  h1, h2, h3 { margin-top: 1em; color: #111; }
+  h1 { font-size: 18pt; border-bottom: 2px solid #333; padding-bottom: 4px; }
+  h2 { font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 2px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .meta { color: #555; font-size: 10pt; margin-bottom: 20px; }
+  @media print { body { margin: 0; padding: 20px; } }
+</style></head><body>
+<div class="meta">ATS Score: ${result.atsScore}% &bull; ${result.summary}</div>
+<pre style="white-space:pre-wrap;font-family:inherit;margin:0;">${result.tailoredResume.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+</body></html>`)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => { printWindow.print() }, 300)
+  }
+
   return (
     <>
       <AppHeader />
-      <div className="container mx-auto px-4 py-8">
+      <div id="main-content" className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Resume Tailor</h1>
           <p className="text-muted-foreground">Optimize your resume for specific job postings with AI</p>
@@ -302,9 +327,15 @@ export default function ResumePage() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Tailored Resume</CardTitle>
-                    <Button variant="outline" size="sm" onClick={handleCopy}>
-                      {copied ? 'Copied!' : 'Copy'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handleDownloadPdf} className="gap-1.5">
+                        <Download className="h-3.5 w-3.5" />
+                        PDF
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleCopy}>
+                        {copied ? 'Copied!' : 'Copy'}
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <pre className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md max-h-64 overflow-y-auto">

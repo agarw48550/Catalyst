@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server'
 import { searchJobs } from '@/lib/jobs'
 import { smartGenerate } from '@/lib/ai/gemini'
+import { jobsSearchSchema } from '@/lib/validations'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const q = searchParams.get('q')
-  const location = searchParams.get('location') || undefined
-  const page = parseInt(searchParams.get('page') || '1', 10)
-
-  if (!q) {
-    return NextResponse.json({ error: 'Query parameter q is required' }, { status: 400 })
+  const parsed = jobsSearchSchema.safeParse({
+    q: searchParams.get('q'),
+    location: searchParams.get('location') || undefined,
+    page: searchParams.get('page') || '1',
+  })
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 })
   }
+  const { q, location, page } = parsed.data
 
   // Try real job APIs first
   try {
@@ -18,7 +21,10 @@ export async function GET(request: Request) {
     const jobs = await searchJobs({ query: q, location, page })
     if (jobs.length > 0) {
       console.log(`[Jobs] Found ${jobs.length} results from APIs`)
-      return NextResponse.json({ jobs, count: jobs.length, source: 'api' })
+      return NextResponse.json(
+        { jobs, count: jobs.length, source: 'api' },
+        { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
+      )
     }
   } catch (error: any) {
     console.warn('[Jobs] API search failed, falling back to AI:', error.message)
@@ -56,7 +62,10 @@ Return ONLY a JSON array (no markdown, no text before/after):
       text = text.slice(firstBracket, lastBracket + 1)
     }
     const aiJobs = JSON.parse(text)
-    return NextResponse.json({ jobs: aiJobs, count: aiJobs.length, source: 'ai-suggested' })
+    return NextResponse.json(
+      { jobs: aiJobs, count: aiJobs.length, source: 'ai-suggested' },
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
+    )
   } catch (aiError: any) {
     console.error('[Jobs] AI fallback also failed:', aiError.message)
     return NextResponse.json(

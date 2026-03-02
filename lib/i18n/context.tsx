@@ -20,7 +20,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const saved = localStorage.getItem('catalyst-lang') as Language | null
-        if (saved && (saved === 'en' || saved === 'hi')) {
+        if (saved && (saved === 'en' || saved === 'hi' || saved === 'mr')) {
             setLangState(saved)
         }
     }, [])
@@ -46,15 +46,26 @@ export function useLanguage() {
     return useContext(LanguageContext)
 }
 
+const LANG_CYCLE: Language[] = ['en', 'hi', 'mr']
+const LANG_LABELS: Record<Language, string> = {
+    en: 'EN',
+    hi: 'हिंदी',
+    mr: 'मराठी',
+}
+
 export function LanguageToggle() {
     const { lang, setLang } = useLanguage()
+    const currentIdx = LANG_CYCLE.indexOf(lang)
+    const nextLang = LANG_CYCLE[(currentIdx + 1) % LANG_CYCLE.length]
     return (
         <button
-            onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
+            onClick={() => setLang(nextLang)}
             className="px-2.5 py-1 text-xs font-medium rounded-full border border-border/50 hover:bg-accent transition-colors"
-            title={lang === 'en' ? 'हिंदी में बदलें' : 'Switch to English'}
+            title={`Switch to ${LANG_LABELS[nextLang]}`}
+            aria-label={`Current language: ${LANG_LABELS[lang]}. Click to switch to ${LANG_LABELS[nextLang]}`}
         >
-            {lang === 'en' ? 'हिंदी' : 'EN'}
+            {LANG_LABELS[lang]}
         </button>
     )
 }
+

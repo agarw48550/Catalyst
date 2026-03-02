@@ -21,6 +21,7 @@ import {
   Rocket
 } from 'lucide-react'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export default function HomePage() {
   const { t } = useLanguage()
@@ -57,6 +58,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <LanguageToggle />
             <div className="hidden sm:flex items-center gap-2">
               <Link href="/auth/login">
@@ -72,9 +74,9 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1 pt-16">
+      <main id="main-content" className="flex-1 pt-16">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-white py-24 sm:py-32 lg:pb-40">
+        <section className="relative overflow-hidden bg-white dark:bg-slate-950 py-24 sm:py-32 lg:pb-40">
           {/* Animated Background */}
           <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
             <div className="absolute top-[-20%] right-[-15%] w-[60%] h-[60%] bg-gradient-to-br from-primary/8 to-violet-500/8 rounded-full blur-[120px] animate-float-slow"></div>
@@ -91,13 +93,13 @@ export default function HomePage() {
                 {t('hero.badge')}
               </div>
 
-              <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight text-slate-900 leading-[0.9] mb-8 animate-fade-in-up">
+              <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight text-slate-900 dark:text-white leading-[0.9] mb-8 animate-fade-in-up">
                 {t('hero.title1')}
                 <br />
                 <span className="gradient-text animate-gradient-x">{t('hero.title2')}</span>
               </h1>
 
-              <p className="text-lg sm:text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up animation-delay-200">
+              <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up animation-delay-200">
                 {t('hero.subtitle')}
               </p>
 
@@ -151,7 +153,7 @@ export default function HomePage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-24 sm:py-32 bg-slate-50 relative overflow-hidden">
+        <section id="features" className="py-24 sm:py-32 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.02)_1px,transparent_1px)] bg-[size:48px_48px] -z-0"></div>
 
           <div className="container mx-auto px-4 relative z-10">
@@ -160,10 +162,10 @@ export default function HomePage() {
                 <Rocket className="h-3 w-3" />
                 Powerful Tools
               </div>
-              <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 mb-4">
+              <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white mb-4">
                 {t('features.title')}
               </h2>
-              <p className="text-lg text-slate-600">
+              <p className="text-lg text-slate-600 dark:text-slate-400">
                 {t('features.subtitle')}
               </p>
             </div>
@@ -206,13 +208,13 @@ export default function HomePage() {
         </section>
 
         {/* How It Works */}
-        <section className="py-24 bg-slate-50 relative overflow-hidden">
+        <section className="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-wider uppercase mb-4">
                 How it works
               </div>
-              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-4">
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-4">
                 Three Steps to Your Dream Career
               </h2>
             </div>
@@ -222,14 +224,14 @@ export default function HomePage() {
                 { step: '02', title: 'Use AI Tools', desc: 'Build resumes, practice interviews, search jobs, and research careers — all AI-powered.', icon: Sparkles },
                 { step: '03', title: 'Land Your Job', desc: 'Apply with confidence using optimized materials and preparation.', icon: Target },
               ].map((item, i) => (
-                <div key={i} className="relative p-8 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 group text-center">
-                  <div className="text-6xl font-black text-slate-100 group-hover:text-primary/10 transition-colors absolute top-4 right-6">{item.step}</div>
+                <div key={i} className="relative p-8 rounded-3xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 group text-center">
+                  <div className="text-6xl font-black text-slate-100 dark:text-slate-700 group-hover:text-primary/10 transition-colors absolute top-4 right-6">{item.step}</div>
                   <div className="relative z-10">
                     <div className="inline-flex p-4 rounded-2xl bg-primary/10 text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:scale-110">
                       <item.icon className="h-8 w-8" />
                     </div>
-                    <h3 className="text-xl font-black text-slate-900 mb-3">{item.title}</h3>
-                    <p className="text-sm text-slate-500 leading-relaxed">{item.desc}</p>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3">{item.title}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -262,7 +264,7 @@ export default function HomePage() {
       </main>
 
       {/* Modern Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-20">
+      <footer className="bg-slate-900 dark:bg-slate-950 text-slate-300 py-20">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-12 border-b border-slate-800 pb-16">
             <div className="col-span-1 md:col-span-1">
@@ -347,13 +349,13 @@ function FeatureCard({
 
   return (
     <Link href={href} className="block group">
-      <div className={`p-8 rounded-3xl bg-white border border-slate-100 ${c.border} shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 h-full`}>
+      <div className={`p-8 rounded-3xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 ${c.border} shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 h-full`}>
         <div className={`mb-6 p-3 rounded-2xl ${c.bg} text-slate-500 ${c.hover} transition-all duration-300 w-fit group-hover:scale-110`}>
           {icon}
         </div>
-        <h3 className="text-xl font-bold mb-3 text-slate-900 leading-tight">{title}</h3>
-        <p className="text-sm text-slate-500 leading-relaxed font-medium">{description}</p>
-        <div className="mt-6 pt-6 border-t border-slate-50 flex items-center text-xs font-bold text-primary group-hover:translate-x-1 transition-all">
+        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white leading-tight">{title}</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{description}</p>
+        <div className="mt-6 pt-6 border-t border-slate-50 dark:border-slate-700 flex items-center text-xs font-bold text-primary group-hover:translate-x-1 transition-all">
           GET STARTED <ChevronRight className="ml-1 h-3 w-3" />
         </div>
       </div>

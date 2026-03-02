@@ -61,16 +61,16 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50 selection:bg-primary selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 selection:bg-primary selection:text-white">
       <AppHeader />
 
-      <main className="container mx-auto px-4 py-12">
+      <main id="main-content" className="container mx-auto px-4 py-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 group">
+            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white group">
               {t('dash.welcome')}, <span className="gradient-text">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
             </h1>
-            <p className="text-slate-500 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
               {t('dash.subtitle')}
             </p>
           </div>
@@ -189,7 +189,7 @@ function StatCard({ label, value, icon, color }: { label: string; value: string;
           </div>
           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</span>
         </div>
-        <div className="text-3xl font-black text-slate-900">{value}</div>
+        <div className="text-3xl font-black text-slate-900 dark:text-white">{value}</div>
       </CardContent>
     </Card>
   )
@@ -231,8 +231,8 @@ function DashboardToolCard({
               <span className="px-2 py-1 text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white rounded-lg">BETA</span>
             )}
           </div>
-          <h3 className="text-xl font-bold mb-3 text-slate-900">{title}</h3>
-          <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">{description}</p>
+          <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">{title}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-6">{description}</p>
           <div className="flex items-center text-xs font-black text-primary opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">
             Open Tool <ChevronRight className="ml-1 h-3 w-3" />
           </div>
