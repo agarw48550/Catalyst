@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,26 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Hidden admin shortcut: press Ctrl+Shift+K three times quickly
+  useEffect(() => {
+    let count = 0
+    let timer: NodeJS.Timeout | null = null
+    function handler(e: KeyboardEvent) {
+      if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        count++
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(() => { count = 0 }, 1500)
+        if (count >= 3) {
+          setEmail('admin-test@catalyst.dev')
+          setPassword('CatalystAdmin2025!')
+          count = 0
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

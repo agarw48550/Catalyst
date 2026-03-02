@@ -17,14 +17,23 @@ function cleanAIResponse(text: string): string {
 
 export async function POST(request: Request) {
   try {
-    const { question, answer, jobRole, interviewType } = await request.json()
+    const { question, answer, jobRole, interviewType, previousQA } = await request.json()
 
     if (!question || !answer) {
       return NextResponse.json({ error: 'question and answer are required' }, { status: 400 })
     }
 
-    const prompt = `You are an expert interview coach for "${jobRole || 'general'}" positions.
+    // Build conversational context from previous Q&A
+    let contextBlock = ''
+    if (Array.isArray(previousQA) && previousQA.length > 0) {
+      const pairs = previousQA.slice(-3).map((p: { question: string; answer: string }, i: number) =>
+        `Q${i + 1}: ${p.question}\nA${i + 1}: ${(p.answer || '').slice(0, 300)}`
+      ).join('\n')
+      contextBlock = `\nPrevious questions and answers for context (the candidate already answered these):\n${pairs}\n\nUse this context to give more personalized feedback — note if the candidate is improving or repeating mistakes.\n`
+    }
 
+    const prompt = `You are an expert interview coach for "${jobRole || 'general'}" positions.
+${contextBlock}
 The candidate was asked this ${interviewType || 'behavioral'} interview question:
 "${question}"
 
