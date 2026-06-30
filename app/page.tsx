@@ -62,10 +62,10 @@ export default function HomePage() {
               <ThemeToggle />
               <LanguageToggle />
               <div className="hidden sm:flex items-center gap-2">
-                <SignInButton mode="modal" afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+                <SignInButton mode="modal">
                   <Button variant="ghost" className="font-semibold text-slate-600 hover:text-primary">{t('nav.login')}</Button>
                 </SignInButton>
-                <SignUpButton mode="modal" afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+                <SignUpButton mode="modal">
                   <Button className="font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-0.5">
                     {t('nav.getStarted')}
                   </Button>
@@ -106,7 +106,7 @@ export default function HomePage() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up animation-delay-300">
                 <div className="w-full sm:w-auto">
-                  <SignUpButton mode="modal" afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+                  <SignUpButton mode="modal">
                     <Button size="xl" className="w-full sm:w-auto text-lg h-16 px-8 rounded-2xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:scale-105 transition-all duration-300 group">
                       {t('hero.cta')} <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Button>
@@ -258,7 +258,7 @@ export default function HomePage() {
               {t('cta.subtitle')}
             </p>
             <div className="inline-block">
-              <SignUpButton mode="modal" afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+              <SignUpButton mode="modal">
                 <Button size="xl" variant="secondary" className="text-primary font-black h-16 px-10 text-xl rounded-2xl hover:scale-105 transition-all duration-300 shadow-2xl shadow-black/20 group">
                   {t('cta.button')} <ChevronRight className="ml-1 h-6 w-6 group-hover:translate-x-1 transition-transform" />
                 </Button>
