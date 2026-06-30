@@ -105,11 +105,13 @@ export default function HomePage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up animation-delay-300">
-                <SignUpButton mode="modal" className="w-full sm:w-auto">
-                  <Button size="xl" className="w-full sm:w-auto text-lg h-16 px-8 rounded-2xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:scale-105 transition-all duration-300 group">
-                    {t('hero.cta')} <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </SignUpButton>
+                <div className="w-full sm:w-auto">
+                  <SignUpButton mode="modal">
+                    <Button size="xl" className="w-full sm:w-auto text-lg h-16 px-8 rounded-2xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 hover:scale-105 transition-all duration-300 group">
+                      {t('hero.cta')} <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </SignUpButton>
+                </div>
                 <Button
                   size="xl"
                   variant="outline"
@@ -255,11 +257,13 @@ export default function HomePage() {
             <p className="text-lg sm:text-xl text-white/70 mb-10 max-w-2xl mx-auto leading-relaxed">
               {t('cta.subtitle')}
             </p>
-            <SignUpButton mode="modal" className="inline-block">
-              <Button size="xl" variant="secondary" className="text-primary font-black h-16 px-10 text-xl rounded-2xl hover:scale-105 transition-all duration-300 shadow-2xl shadow-black/20 group">
-                {t('cta.button')} <ChevronRight className="ml-1 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </SignUpButton>
+            <div className="inline-block">
+              <SignUpButton mode="modal">
+                <Button size="xl" variant="secondary" className="text-primary font-black h-16 px-10 text-xl rounded-2xl hover:scale-105 transition-all duration-300 shadow-2xl shadow-black/20 group">
+                  {t('cta.button')} <ChevronRight className="ml-1 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </SignUpButton>
+            </div>
           </div>
         </section>
       </main>
