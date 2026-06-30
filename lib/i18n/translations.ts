@@ -12,6 +12,7 @@ export const translations = {
         'nav.about': 'About',
         'nav.features': 'Features',
         'nav.login': 'Login',
+        'nav.signup': 'Sign Up',
         'nav.getStarted': 'Get Started',
         'nav.free': '100% Free',
 
@@ -187,6 +188,7 @@ export const translations = {
         'nav.about': 'हमारे बारे में',
         'nav.features': 'सुविधाएँ',
         'nav.login': 'लॉगिन',
+        'nav.signup': 'साइन अप करें',
         'nav.getStarted': 'शुरू करें',
         'nav.free': '100% मुफ़्त',
 
@@ -362,6 +364,7 @@ export const translations = {
         'nav.about': 'आमच्याबद्दल',
         'nav.features': 'वैशिष्ट्ये',
         'nav.login': 'लॉगिन',
+        'nav.signup': 'साइन अप करा',
         'nav.getStarted': 'सुरू करा',
         'nav.free': '100% मोफत',
 

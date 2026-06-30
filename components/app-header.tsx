@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Briefcase, FileText, MessageSquare, TrendingUp, Search, LogOut, LayoutDashboard, Globe } from 'lucide-react'
-import { useAuth } from '@/hooks/useAuth'
+import { Briefcase, FileText, MessageSquare, TrendingUp, Search, LayoutDashboard } from 'lucide-react'
+import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
 import { ThemeToggle } from '@/components/theme-toggle'
 
@@ -17,14 +16,13 @@ const navItems = [
 ] as const
 
 export function AppHeader() {
-    const { signOut } = useAuth()
     const { t } = useLanguage()
 
     return (
         <header className="border-b bg-background/80 backdrop-blur-md sticky top-0 z-50">
             <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-6">
-                    <Link href="/dashboard" className="flex items-center gap-2 group">
+                    <Link href="/" className="flex items-center gap-2 group">
                         <div className="p-1.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
                             <Briefcase className="h-5 w-5" />
                         </div>
@@ -50,15 +48,19 @@ export function AppHeader() {
                     <ThemeToggle />
                     <LanguageToggle />
                     <div className="h-6 w-[1px] bg-border mx-1 hidden sm:block"></div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={signOut}
-                        className="gap-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
-                    >
-                        <LogOut className="h-4 w-4" />
-                        <span className="hidden sm:inline">{t('nav.logout')}</span>
-                    </Button>
+                    <Show when="signed-out">
+                        <div className="flex gap-2">
+                            <SignInButton mode="modal">
+                                <Button variant="ghost" size="sm">{t('nav.login')}</Button>
+                            </SignInButton>
+                            <SignUpButton mode="modal">
+                                <Button size="sm">{t('nav.signup')}</Button>
+                            </SignUpButton>
+                        </div>
+                    </Show>
+                    <Show when="signed-in">
+                        <UserButton afterSignOutUrl="/" />
+                    </Show>
                 </div>
             </div>
         </header>
