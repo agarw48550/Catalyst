@@ -50,10 +50,10 @@ export function AppHeader() {
                     <div className="h-6 w-[1px] bg-border mx-1 hidden sm:block"></div>
                     <Show when="signed-out">
                         <div className="flex gap-2">
-                            <SignInButton mode="modal">
+                            <SignInButton mode="modal" afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
                                 <Button variant="ghost" size="sm">{t('nav.login')}</Button>
                             </SignInButton>
-                            <SignUpButton mode="modal">
+                            <SignUpButton mode="modal" afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
                                 <Button size="sm">{t('nav.signup')}</Button>
                             </SignUpButton>
                         </div>
