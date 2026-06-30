@@ -28,6 +28,7 @@ export type GeminiModel =
   | 'gemini-2.5-pro'
   | 'gemini-2.0-flash'
   | 'gemini-2.0-flash-lite'
+  | 'gemma-4-31b-it'
   | 'text-embedding-004'
 
 export interface GeminiRequest {
@@ -50,9 +51,10 @@ export interface GeminiResponse {
  * Model fallback map: when a model hits 429, try these alternatives
  */
 const MODEL_FALLBACKS: Record<string, GeminiModel[]> = {
-  'gemini-2.5-pro': ['gemini-2.5-flash', 'gemini-2.0-flash'],
-  'gemini-2.5-flash': ['gemini-2.0-flash'],
-  'gemini-2.0-flash': ['gemini-2.5-flash'],
+  'gemma-4-31b-it': ['gemini-2.5-pro', 'gemini-2.5-flash'],
+  'gemini-2.5-pro': ['gemma-4-31b-it', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+  'gemini-2.5-flash': ['gemma-4-31b-it', 'gemini-2.0-flash'],
+  'gemini-2.0-flash': ['gemma-4-31b-it', 'gemini-2.5-flash'],
 }
 
 function is429Error(error: any): boolean {
@@ -271,7 +273,7 @@ async function callDeepSeek(request: GeminiRequest): Promise<GeminiResponse> {
 }
 
 /**
- * Smart generate: tries Gemini (with model fallback), then OpenRouter, then DeepSeek
+ * Smart generate: tries Gemini (with model fallback) first, then OpenRouter, then DeepSeek
  * This is the main entry point — always use this instead of generateContent directly
  */
 export async function smartGenerate(request: GeminiRequest): Promise<GeminiResponse> {

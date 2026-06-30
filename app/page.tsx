@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   ArrowRight,
@@ -20,12 +21,21 @@ import {
   Target,
   Rocket
 } from 'lucide-react'
-import { SignInButton, SignUpButton } from '@clerk/nextjs'
+import { SignInButton, SignUpButton, useAuth, useUser } from '@clerk/nextjs'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { useEffect } from 'react'
 
 export default function HomePage() {
   const { t } = useLanguage()
+  const { isSignedIn, isLoaded } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push('/dashboard')
+    }
+  }, [isLoaded, isSignedIn, router])
 
   const scrollToFeatures = () => {
     const features = document.getElementById('features')

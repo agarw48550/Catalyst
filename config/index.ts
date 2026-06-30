@@ -24,8 +24,8 @@ export const config = {
     apiKey: process.env.GEMINI_API_KEY || '',
     apiKeySecondary: process.env.GEMINI_API_KEY_SECONDARY || '',
     apiKeyTertiary: process.env.GEMINI_API_KEY_TERTIARY || '',
-    defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash',
-    flashModel: process.env.GEMINI_FLASH_MODEL || 'gemini-2.0-flash',
+    defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemma-4-31b-it',
+    flashModel: process.env.GEMINI_FLASH_MODEL || 'gemma-4-31b-it',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     // Fallback order for API keys
     fallbackOrder: ['primary', 'secondary', 'tertiary'] as const,
@@ -76,7 +76,7 @@ export const config = {
       apiKey: process.env.OPENROUTER_API_KEY || '',
       baseUrl: 'https://openrouter.ai/api/v1',
       // Free models on OpenRouter
-      defaultModel: 'deepseek/deepseek-r1-0528:free',
+      defaultModel: 'google/gemma-4-31b-it:free',
       fallbackModel: 'meta-llama/llama-3.3-8b-instruct:free',
     },
     huggingface: {
