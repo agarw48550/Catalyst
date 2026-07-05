@@ -1,243 +1,143 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import {
-  Briefcase,
-  FileText,
-  MessageSquare,
-  TrendingUp,
-  ChevronRight,
-  Plus,
-  ArrowUpRight,
-  Target,
-  Search,
-  Zap,
-  Settings
-} from 'lucide-react'
+import { ArrowRight, FileText, Sparkles, Target, Zap } from 'lucide-react'
+import { AppHeader } from '@/components/app-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
-import { AppHeader } from '@/components/app-header'
 import { useLanguage } from '@/lib/i18n/context'
-import Link from 'next/link'
 
-function useRealStats() {
-  const [stats, setStats] = useState({ resumes: 0, interviews: 0, savedJobs: 0, researches: 0 })
-  const [reports, setReports] = useState<any[]>([])
+function useResumeStats() {
+  const [resumeCount, setResumeCount] = useState(0)
 
   useEffect(() => {
     try {
-      const savedJobs = JSON.parse(localStorage.getItem('savedJobs') || '[]')
-      const resumeCount = parseInt(localStorage.getItem('catalyst_resume_count') || '0', 10)
-      const interviewCount = parseInt(localStorage.getItem('catalyst_interview_count') || '0', 10)
-      const researchCount = parseInt(localStorage.getItem('catalyst_research_count') || '0', 10)
-      const interviewReports = JSON.parse(localStorage.getItem('catalyst_interview_reports') || '[]')
-      setStats({
-        resumes: resumeCount,
-        interviews: interviewCount,
-        savedJobs: savedJobs.length,
-        researches: researchCount,
-      })
-      setReports(interviewReports.slice(0, 5))
+      setResumeCount(parseInt(localStorage.getItem('catalyst_resume_count') || '0', 10))
     } catch {
-      // ignore
+      setResumeCount(0)
     }
   }, [])
 
-  return { stats, reports }
+  return { resumeCount }
 }
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
-  const router = useRouter()
   const { t } = useLanguage()
-  const { stats, reports } = useRealStats()
+  const { resumeCount } = useResumeStats()
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <Zap className="h-8 w-8 animate-pulse text-primary" />
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Zap className="h-8 w-8 animate-pulse text-primary" />
+      </div>
+    )
+  }
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'there'
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 selection:bg-primary selection:text-white">
       <AppHeader />
 
       <main id="main-content" className="container mx-auto px-4 py-12">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white group">
-              {t('dash.welcome')}, <span className="gradient-text">{user?.user_metadata?.full_name || user?.email?.split('@')[0]}</span>
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              {t('dash.subtitle')}
-            </p>
-          </div>
-          <Link href="/resume">
-            <Button className="h-12 px-6 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all">
-              <Plus className="mr-2 h-5 w-5" /> {t('dash.resumeBuilder')}
-            </Button>
-          </Link>
-        </div>
+        <section className="grid gap-6 lg:grid-cols-[1.5fr_0.95fr]">
+          <Card className="overflow-hidden border-0 shadow-sm">
+            <CardContent className="relative p-8 sm:p-10">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.14),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.1),transparent_35%)]" />
+              <div className="relative">
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Production Focus
+                </div>
+                <h1 className="mt-6 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                  {t('dash.welcome')}, <span className="gradient-text">{displayName}</span>
+                </h1>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
+                  Catalyst is now focused on one production-ready workflow: tailoring resumes for specific jobs
+                  with ATS-oriented AI guidance.
+                </p>
 
-        {/* Quick Stats — real data from localStorage */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <StatCard label={t('dash.resumes')} value={stats.resumes.toString()} icon={<FileText className="h-5 w-5" />} color="primary" />
-          <StatCard label={t('dash.interviews')} value={stats.interviews.toString()} icon={<MessageSquare className="h-5 w-5" />} color="violet" />
-          <StatCard label={t('dash.savedJobs')} value={stats.savedJobs.toString()} icon={<Target className="h-5 w-5" />} color="orange" />
-          <StatCard label="Researches" value={stats.researches.toString()} icon={<TrendingUp className="h-5 w-5" />} color="emerald" />
-        </div>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Button asChild size="lg" className="rounded-xl font-bold">
+                    <Link href="/resume">
+                      Open Resume Builder <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Grid of Tools */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <DashboardToolCard
-            title={t('dash.resumeBuilder')}
-            description={t('dash.resumeDesc')}
-            icon={<FileText className="h-8 w-8" />}
-            href="/resume"
-            color="indigo"
-          />
-          <DashboardToolCard
-            title={t('dash.interviewPractice')}
-            description={t('dash.interviewDesc')}
-            icon={<MessageSquare className="h-8 w-8" />}
-            href="/interview"
-            color="violet"
-          />
-          <DashboardToolCard
-            title={t('dash.jobSearch')}
-            description={t('dash.jobDesc')}
-            icon={<Search className="h-8 w-8" />}
-            href="/jobs"
-            color="amber"
-          />
-          <DashboardToolCard
-            title={t('dash.careerResearch')}
-            description={t('dash.researchDesc')}
-            icon={<TrendingUp className="h-8 w-8" />}
-            href="/research"
-            color="emerald"
-          />
-          <DashboardToolCard
-            title={t('dash.settings')}
-            description={t('dash.settingsDesc')}
-            icon={<Settings className="h-8 w-8" />}
-            href="/settings"
-            color="slate"
-          />
-        </div>
-
-        {/* Recent Interview Reports */}
-        {reports.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-black tracking-tight text-slate-900 mb-6">Recent Interview Reports</h2>
-            <div className="space-y-4">
-              {reports.map((rpt: any, i: number) => (
-                <Card key={rpt.id || i} className="border-0 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-900">{rpt.jobRole}</h3>
-                        <p className="text-sm text-slate-500">
-                          {rpt.interviewType} • {rpt.date ? new Date(rpt.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">{rpt.executiveSummary?.slice(0, 120)}{(rpt.executiveSummary?.length || 0) > 120 ? '...' : ''}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-2xl font-black ${
-                          rpt.overallScore >= 80 ? 'text-green-600' :
-                          rpt.overallScore >= 60 ? 'text-amber-600' :
-                          'text-red-600'
-                        }`}>
-                          {rpt.overallScore}%
-                        </div>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          rpt.overallAssessment?.includes('Ready') ? 'bg-green-100 text-green-700' :
-                          rpt.overallAssessment?.includes('Practice') ? 'bg-amber-100 text-amber-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {rpt.overallAssessment}
-                        </span>
-                      </div>
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+                <Target className="h-5 w-5 text-primary" />
+                Your Progress
+              </CardTitle>
+              <CardDescription>Current production activity across the live workflow.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="rounded-2xl bg-slate-100 p-6 dark:bg-slate-900">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                      Tailored resumes
+                    </p>
+                    <div className="mt-2 text-4xl font-black text-slate-900 dark:text-white">
+                      {resumeCount}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+                  </div>
+                  <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                <p>Upload a PDF or paste your resume, add a target job description, and generate a tailored version.</p>
+                <p>Removed tools are no longer part of the live dashboard until they pass a separate production release.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_1fr]">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-white">Resume Builder</CardTitle>
+              <CardDescription>The only active workflow in the current production release.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">What you can do right now</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                  <li>Upload a PDF resume and extract its text.</li>
+                  <li>Paste a job description and generate a tailored resume draft.</li>
+                  <li>Review ATS score, matched skills, missing skills, and revision suggestions.</li>
+                </ul>
+              </div>
+              <Button asChild variant="outline" className="rounded-xl font-semibold">
+                <Link href="/resume">Go to Resume Builder</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-slate-900 dark:text-white">Release Notes</CardTitle>
+              <CardDescription>Why the dashboard is intentionally smaller.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <p>This release removes unfinished tools from the main product surface instead of keeping half-ready experiences online.</p>
+              <p>Direct visits to those routes now show a roadmap message rather than a live workflow.</p>
+              <p>The goal is a cleaner launch around one feature that is validated and supportable.</p>
+            </CardContent>
+          </Card>
+        </section>
       </main>
     </div>
-  )
-}
-
-function StatCard({ label, value, icon, color }: { label: string; value: string; icon: React.ReactNode; color: string }) {
-  const colorMap: Record<string, string> = {
-    primary: 'bg-primary/10 text-primary',
-    violet: 'bg-violet-100 text-violet-600',
-    orange: 'bg-orange-100 text-orange-600',
-    emerald: 'bg-emerald-100 text-emerald-600',
-  }
-
-  return (
-    <Card className="border-0 shadow-sm overflow-hidden rounded-3xl hover:shadow-md transition-shadow">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-2 rounded-xl ${colorMap[color] || colorMap.primary}`}>
-            {icon}
-          </div>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</span>
-        </div>
-        <div className="text-3xl font-black text-slate-900 dark:text-white">{value}</div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function DashboardToolCard({
-  title,
-  description,
-  icon,
-  href,
-  color,
-  beta = false
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  href: string;
-  color: string;
-  beta?: boolean;
-}) {
-  const colorMap: Record<string, string> = {
-    indigo: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
-    violet: 'bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white',
-    amber: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white',
-    emerald: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
-    blue: 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white',
-    slate: 'bg-slate-100 text-slate-600 group-hover:bg-slate-900 group-hover:text-white',
-  }
-
-  return (
-    <Link href={href}>
-      <Card className="h-full border-0 shadow-sm overflow-hidden rounded-3xl group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
-        <CardContent className="p-8">
-          <div className="flex justify-between items-start mb-6">
-            <div className={`p-4 rounded-2xl transition-all duration-500 ${colorMap[color] || colorMap.indigo}`}>
-              {icon}
-            </div>
-            {beta && (
-              <span className="px-2 py-1 text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white rounded-lg">BETA</span>
-            )}
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">{title}</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-6">{description}</p>
-          <div className="flex items-center text-xs font-black text-primary opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">
-            Open Tool <ChevronRight className="ml-1 h-3 w-3" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
   )
 }

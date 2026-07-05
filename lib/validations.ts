@@ -7,7 +7,6 @@ import { z } from 'zod'
 // ── Sanitisation helpers ────────────────────────────────────────────
 /** Strip control characters and excessive whitespace */
 function sanitize(val: string) {
-    // eslint-disable-next-line no-control-regex
     return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '').trim()
 }
 

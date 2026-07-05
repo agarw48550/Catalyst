@@ -41,7 +41,7 @@ export function LoadingBar({ active, estimatedTime = 15, label }: LoadingBarProp
     }, (estimatedTime * 1000) / 60) // ~60 updates over the estimated time
 
     return () => clearInterval(interval)
-  }, [active, estimatedTime])
+  }, [active, estimatedTime, progress])
 
   if (!active && progress === 0) return null
 

@@ -54,6 +54,6 @@ describe('resend-confirmation API behavior', () => {
         })
 
         expect(error).toBeTruthy()
-        expect(error.message).toBe('Email rate limit exceeded')
+        expect(error?.message).toBe('Email rate limit exceeded')
     })
 })

@@ -29,6 +29,7 @@ export type GeminiModel =
   | 'gemini-2.0-flash'
   | 'gemini-2.0-flash-lite'
   | 'gemma-4-31b-it'
+  | 'gemma-4-26b-a4b-it'
   | 'text-embedding-004'
 
 export interface GeminiRequest {
@@ -47,11 +48,38 @@ export interface GeminiResponse {
   keyUsed: string
 }
 
+type GeminiContentPart = {
+  text?: string
+  inlineData?: {
+    mimeType: string
+    data: string
+  }
+}
+
+type GeminiContents = Array<{
+  role: 'user'
+  parts: GeminiContentPart[]
+}>
+
+interface GeminiContentsRequest {
+  contents: GeminiContents
+  modelCandidates: GeminiModel[]
+  temperature?: number
+  maxTokens?: number
+  systemInstruction?: string
+}
+
+export const RESUME_MODEL_CANDIDATES = [
+  'gemma-4-31b-it',
+  'gemma-4-26b-a4b-it',
+] as const satisfies readonly GeminiModel[]
+
 /**
  * Model fallback map: when a model hits 429, try these alternatives
  */
 const MODEL_FALLBACKS: Record<string, GeminiModel[]> = {
-  'gemma-4-31b-it': ['gemini-2.5-pro', 'gemini-2.5-flash'],
+  'gemma-4-31b-it': ['gemma-4-26b-a4b-it', 'gemini-2.5-pro', 'gemini-2.5-flash'],
+  'gemma-4-26b-a4b-it': ['gemma-4-31b-it', 'gemini-2.5-pro', 'gemini-2.5-flash'],
   'gemini-2.5-pro': ['gemma-4-31b-it', 'gemini-2.5-flash', 'gemini-2.0-flash'],
   'gemini-2.5-flash': ['gemma-4-31b-it', 'gemini-2.0-flash'],
   'gemini-2.0-flash': ['gemma-4-31b-it', 'gemini-2.5-flash'],
@@ -62,59 +90,71 @@ function is429Error(error: any): boolean {
   return error?.status === 429 || msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('quota')
 }
 
-/**
- * Generate content using Gemini with automatic key + model fallback
- * On 429 rate limit errors, automatically falls back to a cheaper/available model
- */
-export async function generateContent(
-  request: GeminiRequest
-): Promise<GeminiResponse> {
-  const requestedModel = request.model || config.gemini.defaultModel as GeminiModel
-  // Build the list of models to try: requested model first, then fallbacks
-  const modelsToTry: GeminiModel[] = [requestedModel, ...(MODEL_FALLBACKS[requestedModel] || [])]
+function getAvailableKeys(clients: Map<string, GoogleGenerativeAI>) {
+  const availableKeys = config.gemini.fallbackOrder.filter((keyType) => clients.has(keyType))
+
+  if (clients.size === 0 || availableKeys.length === 0) {
+    console.error('No Gemini API keys found in environment. GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET' : 'MISSING')
+    throw new Error('No Gemini API keys configured. Please set GEMINI_API_KEY in your environment variables.')
+  }
+
+  return availableKeys
+}
+
+async function generateContentWithCandidates({
+  contents,
+  modelCandidates,
+  temperature,
+  maxTokens,
+  systemInstruction,
+}: GeminiContentsRequest): Promise<GeminiResponse> {
+  if (modelCandidates.length === 0) {
+    throw new Error('At least one Gemini model candidate is required.')
+  }
+
   const startTime = Date.now()
   const clients = getClients()
+  const availableKeys = getAvailableKeys(clients)
+  const requestedModel = modelCandidates[0]
 
-  if (clients.size === 0) {
-    console.error('No Gemini API keys found in environment. GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET' : 'MISSING')
-    throw new Error('No Gemini API keys configured. Please set GEMINI_API_KEY in your environment variables.')
-  }
-
-  const availableKeys = config.gemini.fallbackOrder.filter((k) => clients.has(k))
-  if (availableKeys.length === 0) {
-    console.error('No Gemini API keys found in environment. GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET' : 'MISSING')
-    throw new Error('No Gemini API keys configured. Please set GEMINI_API_KEY in your environment variables.')
-  }
+  // #region agent log
+  fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H1',location:'lib/ai/gemini.ts:119',message:'Gemini request starting',data:{modelCandidates,availableKeys,keyPresence:{primary:{present:Boolean(process.env.GEMINI_API_KEY),length:process.env.GEMINI_API_KEY?.trim().length||0},secondary:{present:Boolean(process.env.GEMINI_API_KEY_SECONDARY),length:process.env.GEMINI_API_KEY_SECONDARY?.trim().length||0},tertiary:{present:Boolean(process.env.GEMINI_API_KEY_TERTIARY),length:process.env.GEMINI_API_KEY_TERTIARY?.trim().length||0}}},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   let lastError: Error | null = null
 
-  // Try each model (requested first, then fallbacks on 429)
-  for (const model of modelsToTry) {
-    // Try each available API key for this model
+  for (const model of modelCandidates) {
     for (const keyType of availableKeys) {
       const client = clients.get(keyType)!
 
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H2',location:'lib/ai/gemini.ts:130',message:'Gemini attempt',data:{model,keyType,requestedModel},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         const generativeModel = client.getGenerativeModel({
           model,
-          systemInstruction: request.systemInstruction,
+          systemInstruction,
         })
 
         const result = await generativeModel.generateContent({
-          contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
+          contents,
           generationConfig: {
-            temperature: request.temperature ?? 0.7,
-            maxOutputTokens: request.maxTokens ?? 2048,
+            temperature: temperature ?? 0.7,
+            maxOutputTokens: maxTokens ?? 2048,
           },
-        })
+        } as any)
 
         const response = await result.response
         const text = response.text()
-
         const usedFallbackModel = model !== requestedModel
+
         if (usedFallbackModel) {
           console.log(`✓ Model fallback succeeded: ${requestedModel} → ${model} (key: ${keyType})`)
         }
+
+        // #region agent log
+        fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H4',location:'lib/ai/gemini.ts:151',message:'Gemini success',data:{model,keyType,fallbackUsed:keyType!=='primary'||usedFallbackModel,textLength:text.length},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         await logApiCall({
           service: 'gemini',
@@ -136,6 +176,10 @@ export async function generateContent(
         lastError = error
         console.error(`Gemini API error [${model}/${keyType}]:`, error.message?.slice(0, 200))
 
+        // #region agent log
+        fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H3',location:'lib/ai/gemini.ts:170',message:'Gemini error',data:{model,keyType,status:error?.status||null,isApiKeyInvalid:Boolean(error?.message?.includes('API key not valid')),messageSnippet:(error?.message||'').slice(0,200)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
         await logApiCall({
           service: 'gemini',
           endpoint: model,
@@ -143,23 +187,38 @@ export async function generateContent(
           statusCode: error.status || 500,
           responseTime: Date.now() - startTime,
           error: error.message,
-          fallbackUsed: keyType !== 'primary',
+          fallbackUsed: keyType !== 'primary' || model !== requestedModel,
         })
 
-        // If it's a 429 rate limit error, skip remaining keys for this model
-        // (quota is per-model, not per-key) and try the next model
         if (is429Error(error)) {
           console.log(`⚠ Rate limited on ${model}, trying fallback model...`)
           break
         }
 
-        // For non-429 errors, try next key
         console.log(`Trying next API key for ${model}...`)
       }
     }
   }
 
   throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message || 'Unknown error'}`)
+}
+
+/**
+ * Generate content using Gemini with automatic key + model fallback
+ * On 429 rate limit errors, automatically falls back to a cheaper/available model
+ */
+export async function generateContent(
+  request: GeminiRequest
+): Promise<GeminiResponse> {
+  const requestedModel = request.model || config.gemini.defaultModel as GeminiModel
+  const modelsToTry: GeminiModel[] = [requestedModel, ...(MODEL_FALLBACKS[requestedModel] || [])]
+  return generateContentWithCandidates({
+    contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
+    modelCandidates: modelsToTry,
+    temperature: request.temperature,
+    maxTokens: request.maxTokens,
+    systemInstruction: request.systemInstruction,
+  })
 }
 
 /**
@@ -314,6 +373,24 @@ export async function smartGenerate(request: GeminiRequest): Promise<GeminiRespo
   }
 
   return result!
+}
+
+export async function generateGeminiOnly(
+  request: GeminiRequest & { modelCandidates: GeminiModel[] }
+): Promise<GeminiResponse> {
+  return generateContentWithCandidates({
+    contents: [{ role: 'user', parts: [{ text: request.prompt }] }],
+    modelCandidates: request.modelCandidates,
+    temperature: request.temperature,
+    maxTokens: request.maxTokens,
+    systemInstruction: request.systemInstruction,
+  })
+}
+
+export async function generateGeminiOnlyWithContents(
+  request: GeminiContentsRequest
+): Promise<GeminiResponse> {
+  return generateContentWithCandidates(request)
 }
 
 /**

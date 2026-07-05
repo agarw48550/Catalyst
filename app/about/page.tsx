@@ -1,179 +1,144 @@
 'use client'
 
-import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
-import { Briefcase, Rocket, Target, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { ArrowLeft, Briefcase, FileText, Rocket, ShieldCheck, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { LanguageToggle, useLanguage } from '@/lib/i18n/context'
 
 export default function AboutPage() {
-    const { t } = useLanguage()
+  const { t } = useLanguage()
 
-    return (
-        <div className="min-h-screen bg-white selection:bg-primary selection:text-white">
-            {/* Public Header */}
-            <header className="fixed top-0 w-full z-50 border-b bg-background/60 backdrop-blur-xl">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <Link href="/" className="flex items-center space-x-2 group">
-                            <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 transform group-hover:rotate-6">
-                                <Briefcase className="h-6 w-6" />
-                            </div>
-                            <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                                Catalyst
-                            </span>
-                        </Link>
-                        <nav className="hidden md:flex items-center space-x-1">
-                            <Link href="/" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">
-                                <ArrowLeft className="h-4 w-4 inline mr-1" />
-                                Home
-                            </Link>
-                            <Link href="/features" className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-primary transition-colors">{t('nav.features')}</Link>
-                        </nav>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <LanguageToggle />
-                        <Link href="/auth/login">
-                            <Button variant="ghost" className="font-semibold text-slate-600 hover:text-primary">{t('nav.login')}</Button>
-                        </Link>
-                        <Link href="/auth/signup">
-                            <Button className="font-bold shadow-lg shadow-primary/20">{t('nav.getStarted')}</Button>
-                        </Link>
-                    </div>
-                </div>
-            </header>
+  return (
+    <div className="min-h-screen bg-white selection:bg-primary selection:text-white dark:bg-slate-950">
+      <header className="sticky top-0 z-50 border-b bg-background/75 backdrop-blur-xl">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-white">
+                <Briefcase className="h-5 w-5" />
+              </div>
+              <span className="text-2xl font-black tracking-tight">Catalyst</span>
+            </Link>
+            <nav className="hidden items-center gap-1 md:flex">
+              <Link href="/" className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300">
+                <ArrowLeft className="mr-1 inline h-4 w-4" />
+                Home
+              </Link>
+              <Link href="/features" className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300">
+                {t('nav.features')}
+              </Link>
+            </nav>
+          </div>
 
-            <main className="pt-16">
-                {/* Hero Section */}
-                <section className="relative py-24 overflow-hidden border-b">
-                    <div className="absolute top-0 right-0 w-[40%] h-[100%] bg-primary/5 blur-[100px] -z-10"></div>
-                    <div className="container mx-auto px-4">
-                        <div className="max-w-3xl">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-wider uppercase mb-6">
-                                Our Story
-                            </div>
-                            <h1 className="text-5xl md:text-7xl font-black tracking-tight text-slate-900 mb-8 leading-[0.9]">
-                                Empowering the <span className="gradient-text">Future of Work</span> in India
-                            </h1>
-                            <p className="text-xl text-slate-600 leading-relaxed mb-10">
-                                {t('about.mission.text')}
-                            </p>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Mission & Vision */}
-                <section className="py-24 bg-slate-50">
-                    <div className="container mx-auto px-4">
-                        <div className="grid md:grid-cols-2 gap-12">
-                            <div className="p-10 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all">
-                                <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600 w-fit mb-6">
-                                    <Target className="h-8 w-8" />
-                                </div>
-                                <h2 className="text-3xl font-black mb-4">{t('about.mission.title')}</h2>
-                                <p className="text-slate-600 leading-relaxed italic">
-                                    "{t('about.mission.text')}"
-                                </p>
-                            </div>
-
-                            <div className="p-10 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all">
-                                <div className="p-3 rounded-2xl bg-purple-100 text-purple-600 w-fit mb-6">
-                                    <Rocket className="h-8 w-8" />
-                                </div>
-                                <h2 className="text-3xl font-black mb-4">{t('about.vision.title')}</h2>
-                                <p className="text-slate-600 leading-relaxed">
-                                    {t('about.vision.text')}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Stats */}
-                <section className="py-24">
-                    <div className="container mx-auto px-4 text-center">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                            <div className="space-y-2">
-                                <div className="text-4xl font-black tracking-tighter text-primary">10k+</div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about.stats.users')}</div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="text-4xl font-black tracking-tighter text-primary">25k+</div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about.stats.resumes')}</div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="text-4xl font-black tracking-tighter text-primary">15k+</div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about.stats.interviews')}</div>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="text-4xl font-black tracking-tighter text-primary">500k+</div>
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about.stats.jobs')}</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Team/Founder Section */}
-                <section className="py-24 bg-slate-900 text-white rounded-[3rem] mx-4 mb-24">
-                    <div className="container mx-auto px-4">
-                        <div className="flex flex-col md:flex-row items-center gap-16">
-                            <div className="w-full md:w-1/3">
-                                <div className="aspect-square rounded-[3rem] bg-gradient-to-br from-primary to-violet-600 p-1">
-                                    {/* Replace with actual image later */}
-                                    <div className="w-full h-full rounded-[2.9rem] bg-slate-800 flex items-center justify-center text-7xl font-black text-white/20">
-                                        AA
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex-1 space-y-8">
-                                <div>
-                                    <div className="text-primary font-bold uppercase tracking-widest text-sm mb-4">{t('about.founder')}</div>
-                                    <h2 className="text-5xl font-black tracking-tight mb-2">{t('about.founderName')}</h2>
-                                    <div className="text-slate-400 text-xl">{t('about.founderRole')}</div>
-                                </div>
-                                <p className="text-slate-300 text-lg leading-relaxed max-w-2xl italic">
-                                    "I built Catalyst because I believe technology should empower people, not gatekeep opportunities. Every job seeker deserves access to world-class career tools without a price tag."
-                                </p>
-                                <div className="flex gap-4">
-                                    <div className="h-10 w-10 bg-slate-800 rounded-full hover:bg-primary transition-colors cursor-pointer"></div>
-                                    <div className="h-10 w-10 bg-slate-800 rounded-full hover:bg-primary transition-colors cursor-pointer"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Tech Stack */}
-                <section className="py-24">
-                    <div className="container mx-auto px-4 text-center">
-                        <h2 className="text-4xl font-black mb-4">{t('about.tech')}</h2>
-                        <p className="text-slate-500 mb-12 max-w-xl mx-auto">
-                            {t('about.techDesc')}
-                        </p>
-                        <div className="flex flex-wrap justify-center gap-12 grayscale opacity-40">
-                            <span className="text-2xl font-bold">NEXT.JS</span>
-                            <span className="text-2xl font-bold">GEMINI AI</span>
-                            <span className="text-2xl font-bold">SUPABASE</span>
-                            <span className="text-2xl font-bold">TAILWIND</span>
-                        </div>
-                    </div>
-                </section>
-            </main>
-
-            {/* CTA */}
-            <section className="py-24 bg-primary text-white text-center">
-                <h2 className="text-4xl font-black mb-8 px-4">{t('cta.title')}</h2>
-                <Link href="/auth/signup">
-                    <Button variant="secondary" size="xl" className="h-16 px-10 text-xl rounded-2xl">
-                        {t('cta.button')}
-                    </Button>
-                </Link>
-            </section>
-
-            <footer className="bg-slate-50 py-12 border-t">
-                <div className="container mx-auto px-4 text-center text-slate-400 text-xs font-medium">
-                    {t('footer.copyright')}
-                </div>
-            </footer>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <Link href="/auth/login">
+              <Button variant="ghost">{t('nav.login')}</Button>
+            </Link>
+            <Link href="/auth/signup">
+              <Button>{t('nav.getStarted')}</Button>
+            </Link>
+          </div>
         </div>
-    )
+      </header>
+
+      <main className="pt-16">
+        <section className="border-b py-24">
+          <div className="container mx-auto max-w-4xl px-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              <Target className="h-3.5 w-3.5" />
+              What Catalyst is today
+            </div>
+            <h1 className="mt-6 text-5xl font-black tracking-tight text-slate-900 dark:text-white sm:text-6xl">
+              A cleaner, resume-first launch.
+            </h1>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600 dark:text-slate-300">
+              Catalyst started as a broader career-tool concept, but the production release intentionally narrows
+              the scope to the Resume Builder. The goal is to launch one workflow that is easier to trust,
+              support, and improve.
+            </p>
+          </div>
+        </section>
+
+        <section className="bg-slate-50 py-24 dark:bg-slate-900/50">
+          <div className="container mx-auto px-4">
+            <div className="grid gap-6 md:grid-cols-3">
+              <AboutCard
+                icon={<FileText className="h-7 w-7" />}
+                title="Focused product scope"
+                description="The live dashboard keeps one active workflow instead of spreading attention across unfinished tools."
+              />
+              <AboutCard
+                icon={<ShieldCheck className="h-7 w-7" />}
+                title="Truthful public copy"
+                description="The site now describes what is actually available instead of promising removed features as if they are live."
+              />
+              <AboutCard
+                icon={<Rocket className="h-7 w-7" />}
+                title="Roadmap kept separate"
+                description="Interview practice, job search, research, and custom settings are now treated as roadmap items."
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24">
+          <div className="container mx-auto grid gap-8 px-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-10">
+                <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                  What the current release includes
+                </h2>
+                <ul className="mt-6 space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  <li>Resume text input by paste or PDF upload.</li>
+                  <li>Tailoring against a specific job title, company, and description.</li>
+                  <li>ATS-oriented scoring, skill matching, and revision suggestions.</li>
+                  <li>Printable PDF export for the tailored result.</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-10">
+                <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                  What we removed from the live product
+                </h2>
+                <ul className="mt-6 space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  <li>Interview Practice</li>
+                  <li>Job Search</li>
+                  <li>Career Research</li>
+                  <li>The custom in-app Settings page</li>
+                </ul>
+                <p className="mt-6 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  Those routes remain visible only as coming-soon placeholders while the production release stays
+                  focused on the resume workflow.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function AboutCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+}) {
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="p-8">
+        <div className="rounded-2xl bg-primary/10 p-3 text-primary w-fit">{icon}</div>
+        <h3 className="mt-5 text-xl font-bold text-slate-900 dark:text-white">{title}</h3>
+        <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+      </CardContent>
+    </Card>
+  )
 }

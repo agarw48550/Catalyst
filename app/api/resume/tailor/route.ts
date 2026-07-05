@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { smartGenerate } from '@/lib/ai/gemini'
+import { generateGeminiOnly, RESUME_MODEL_CANDIDATES } from '@/lib/ai/gemini'
 import { resumeTailorSchema } from '@/lib/validations'
 
 function cleanAIResponse(text: string): string {
@@ -57,12 +57,21 @@ Return ONLY this JSON object:
   "summary": "Brief summary of changes made in 1-2 sentences"
 }`
 
-    const result = await smartGenerate({ prompt, model: 'gemini-2.5-flash', maxTokens: 8192 })
+    const result = await generateGeminiOnly({
+      prompt,
+      modelCandidates: [...RESUME_MODEL_CANDIDATES],
+      maxTokens: 8192,
+    })
     const text = cleanAIResponse(result.text)
 
     try {
       const data = JSON.parse(text)
-      return NextResponse.json(data)
+      return NextResponse.json(data, {
+        headers: {
+          'X-AI-Model': result.model,
+          'X-AI-Fallback': String(result.fallbackUsed),
+        },
+      })
     } catch (parseError: any) {
       console.error('Resume tailor JSON parse failed. Raw text length:', result.text.length, 'Cleaned length:', text.length)
       console.error('Parse error:', parseError.message)

@@ -54,6 +54,43 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
     isPlayingRef.current = false
   }, [])
 
+  const startAudioCapture = useCallback((ws: WebSocket, audioContext: AudioContext, stream: MediaStream) => {
+    const source = audioContext.createMediaStreamSource(stream)
+    const analyser = audioContext.createAnalyser()
+    analyser.fftSize = 2048
+    source.connect(analyser)
+
+    // Use ScriptProcessorNode as fallback (AudioWorklet needs served files)
+    const processor = audioContext.createScriptProcessor(4096, 1, 1)
+    const dataArray = new Uint8Array(analyser.frequencyBinCount)
+
+    processor.onaudioprocess = (e) => {
+      if (isMuted || ws.readyState !== WebSocket.OPEN) return
+      const input = e.inputBuffer.getChannelData(0)
+
+      analyser.getByteFrequencyData(dataArray)
+      let sum = 0
+      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i]
+      setAudioLevel((sum / dataArray.length / 255) * 100)
+
+      const pcm16 = new Int16Array(input.length)
+      for (let i = 0; i < input.length; i++) {
+        const s = Math.max(-1, Math.min(1, input[i]))
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
+      }
+      const bytes = new Uint8Array(pcm16.buffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+      ws.send(JSON.stringify({
+        realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: btoa(binary) }] },
+      }))
+    }
+
+    source.connect(processor)
+    processor.connect(audioContext.destination)
+    setStatus('listening')
+  }, [isMuted])
+
   const startSession = useCallback(async () => {
     setStatus('connecting'); setError(null); setTranscript([])
     try {
@@ -124,44 +161,7 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
         cleanup()
       }
     } catch (err: any) { setError(err.message || 'Failed to start'); setStatus('error'); cleanup() }
-  }, [jobRole, interviewType, playAudioQueue])
-
-  function startAudioCapture(ws: WebSocket, audioContext: AudioContext, stream: MediaStream) {
-    const source = audioContext.createMediaStreamSource(stream)
-    const analyser = audioContext.createAnalyser()
-    analyser.fftSize = 2048
-    source.connect(analyser)
-
-    // Use ScriptProcessorNode as fallback (AudioWorklet needs served files)
-    const processor = audioContext.createScriptProcessor(4096, 1, 1)
-    const dataArray = new Uint8Array(analyser.frequencyBinCount)
-
-    processor.onaudioprocess = (e) => {
-      if (isMuted || ws.readyState !== WebSocket.OPEN) return
-      const input = e.inputBuffer.getChannelData(0)
-
-      analyser.getByteFrequencyData(dataArray)
-      let sum = 0
-      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i]
-      setAudioLevel((sum / dataArray.length / 255) * 100)
-
-      const pcm16 = new Int16Array(input.length)
-      for (let i = 0; i < input.length; i++) {
-        const s = Math.max(-1, Math.min(1, input[i]))
-        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
-      }
-      const bytes = new Uint8Array(pcm16.buffer)
-      let binary = ''
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-      ws.send(JSON.stringify({
-        realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: btoa(binary) }] },
-      }))
-    }
-
-    source.connect(processor)
-    processor.connect(audioContext.destination)
-    setStatus('listening')
-  }
+  }, [interviewType, jobRole, playAudioQueue, startAudioCapture])
 
   function cleanup() {
     workletNodeRef.current?.disconnect()

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Briefcase, FileText, MessageSquare, TrendingUp, Search, LayoutDashboard } from 'lucide-react'
+import { Briefcase, FileText, LayoutDashboard } from 'lucide-react'
 import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -10,9 +10,6 @@ import { ThemeToggle } from '@/components/theme-toggle'
 const navItems = [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
     { href: '/resume', labelKey: 'nav.resume', icon: FileText },
-    { href: '/interview', labelKey: 'nav.interview', icon: MessageSquare },
-    { href: '/jobs', labelKey: 'nav.jobs', icon: Search },
-    { href: '/research', labelKey: 'nav.research', icon: TrendingUp },
 ] as const
 
 export function AppHeader() {
