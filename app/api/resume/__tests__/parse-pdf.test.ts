@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockGenerateGeminiOnlyWithContents } = vi.hoisted(() => ({
+const { mockGenerateGeminiOnlyWithContents, mockExtractText, mockGetDocumentProxy } = vi.hoisted(() => ({
   mockGenerateGeminiOnlyWithContents: vi.fn(),
+  mockExtractText: vi.fn(),
+  mockGetDocumentProxy: vi.fn(),
 }))
 
 vi.mock('@/lib/ai/gemini', () => ({
   generateGeminiOnlyWithContents: mockGenerateGeminiOnlyWithContents,
   RESUME_MODEL_CANDIDATES: ['gemma-4-31b-it', 'gemma-4-26b-a4b-it'],
+}))
+
+vi.mock('unpdf', () => ({
+  extractText: mockExtractText,
+  getDocumentProxy: mockGetDocumentProxy,
 }))
 
 import { POST } from '../parse-pdf/route'
@@ -26,6 +33,7 @@ function makeRequest(file?: File) {
 describe('POST /api/resume/parse-pdf', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetDocumentProxy.mockResolvedValue({})
   })
 
   it('returns 400 when no file is uploaded', async () => {
@@ -60,9 +68,24 @@ describe('POST /api/resume/parse-pdf', () => {
     await expect(response.json()).resolves.toEqual({ error: 'File must be under 5MB' })
   })
 
-  it('passes the PDF to the Gemma-only helper and returns extracted text', async () => {
+  it('extracts text locally via unpdf without calling the vision model', async () => {
+    const extracted = '  Jane Doe\nSoftware Engineer\n5 years of experience building web applications.  '
+    mockExtractText.mockResolvedValue({ totalPages: 1, text: extracted })
+
+    const file = new File(['pdf-bytes'], 'resume.pdf', { type: 'application/pdf' })
+    const response = await POST(makeRequest(file))
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload).toEqual({ text: extracted.trim() })
+    expect(response.headers.get('X-Extraction-Method')).toBe('local')
+    expect(mockGenerateGeminiOnlyWithContents).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the vision model when local extraction yields little/no text (scanned PDF)', async () => {
+    mockExtractText.mockResolvedValue({ totalPages: 1, text: '  ' })
     mockGenerateGeminiOnlyWithContents.mockResolvedValue({
-      text: '  Jane Doe\nSoftware Engineer  ',
+      text: 'Jane Doe\nSoftware Engineer',
       model: 'gemma-4-31b-it',
       fallbackUsed: false,
       keyUsed: 'primary',
@@ -73,17 +96,45 @@ describe('POST /api/resume/parse-pdf', () => {
     const payload = await response.json()
 
     expect(response.status).toBe(200)
-    expect(payload).toEqual({ text: 'Jane Doe\nSoftware Engineer', pages: 1 })
-    expect(response.headers.get('X-AI-Model')).toBe('gemma-4-31b-it')
-    expect(response.headers.get('X-AI-Fallback')).toBe('false')
-
-    const requestArg = mockGenerateGeminiOnlyWithContents.mock.calls[0][0]
-    expect(requestArg.modelCandidates).toEqual(['gemma-4-31b-it', 'gemma-4-26b-a4b-it'])
-    expect(requestArg.contents[0].parts[0].inlineData.mimeType).toBe('application/pdf')
-    expect(requestArg.contents[0].parts[0].inlineData.data.length).toBeGreaterThan(0)
+    expect(payload).toEqual({ text: 'Jane Doe\nSoftware Engineer' })
+    expect(response.headers.get('X-Extraction-Method')).toBe('vision-model')
+    expect(mockGenerateGeminiOnlyWithContents).toHaveBeenCalledTimes(1)
   })
 
-  it('returns 422 when Gemma extracts no text', async () => {
+  it('strips a leaked preamble line from the vision-model fallback response', async () => {
+    mockExtractText.mockResolvedValue({ totalPages: 1, text: '' })
+    mockGenerateGeminiOnlyWithContents.mockResolvedValue({
+      text: 'Here is the extracted text:\nJane Doe\nSoftware Engineer',
+      model: 'gemma-4-31b-it',
+      fallbackUsed: false,
+      keyUsed: 'primary',
+    })
+
+    const file = new File(['pdf-bytes'], 'resume.pdf', { type: 'application/pdf' })
+    const response = await POST(makeRequest(file))
+    const payload = await response.json()
+
+    expect(payload.text).toBe('Jane Doe\nSoftware Engineer')
+  })
+
+  it('falls back to the vision model when local extraction throws', async () => {
+    mockExtractText.mockRejectedValue(new Error('bad pdf structure'))
+    mockGenerateGeminiOnlyWithContents.mockResolvedValue({
+      text: 'Jane Doe\nSoftware Engineer',
+      model: 'gemma-4-31b-it',
+      fallbackUsed: false,
+      keyUsed: 'primary',
+    })
+
+    const file = new File(['pdf-bytes'], 'resume.pdf', { type: 'application/pdf' })
+    const response = await POST(makeRequest(file))
+
+    expect(response.status).toBe(200)
+    expect(mockGenerateGeminiOnlyWithContents).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 422 when neither local extraction nor the vision model find text', async () => {
+    mockExtractText.mockResolvedValue({ totalPages: 1, text: '' })
     mockGenerateGeminiOnlyWithContents.mockResolvedValue({
       text: '   ',
       model: 'gemma-4-31b-it',
@@ -100,21 +151,8 @@ describe('POST /api/resume/parse-pdf', () => {
     })
   })
 
-  it('returns 500 when no Gemini keys are configured', async () => {
-    mockGenerateGeminiOnlyWithContents.mockRejectedValue(
-      new Error('No Gemini API keys configured. Please set GEMINI_API_KEY in your environment variables.')
-    )
-
-    const file = new File(['pdf-bytes'], 'resume.pdf', { type: 'application/pdf' })
-    const response = await POST(makeRequest(file))
-
-    expect(response.status).toBe(500)
-    await expect(response.json()).resolves.toEqual({
-      error: 'No Gemini API keys configured. Please set GEMINI_API_KEY in your environment variables.',
-    })
-  })
-
-  it('returns 500 when the Gemini helper fails', async () => {
+  it('returns 500 when the vision model fallback fails', async () => {
+    mockExtractText.mockResolvedValue({ totalPages: 1, text: '' })
     mockGenerateGeminiOnlyWithContents.mockRejectedValue(new Error('Gemma PDF extraction failed'))
 
     const file = new File(['pdf-bytes'], 'resume.pdf', { type: 'application/pdf' })

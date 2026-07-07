@@ -1,16 +1,18 @@
 'use client'
 
 import { FeatureComingSoon } from '@/components/feature-coming-soon'
+import { useLanguage } from '@/lib/i18n/context'
 
 export default function JobsPage() {
+  const { t } = useLanguage()
   return (
     <FeatureComingSoon
-      featureName="Job Search"
-      summary="Job discovery is not part of the production release right now. We pulled it from the live dashboard so the public product only exposes the workflow that is ready to support end to end."
+      featureName={t('home.roadmap.jobs')}
+      summary={t('comingSoon.jobs.summary')}
       details={[
-        'Search quality and source coverage need another production pass before launch.',
-        'Saved-job and cross-feature flows were removed from the live product for now.',
-        'Resume Builder remains the active workflow while the broader roadmap is refined.',
+        t('comingSoon.jobs.detail1'),
+        t('comingSoon.jobs.detail2'),
+        t('comingSoon.detail.resumeLive'),
       ]}
     />
   )

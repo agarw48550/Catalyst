@@ -42,9 +42,16 @@ describe('POST /api/resume/tailor', () => {
     await expect(response.json()).resolves.toEqual({ error: 'String must contain at least 1 character(s)' })
   })
 
-  it('truncates long resume and job description content before calling Gemini', async () => {
+  it('returns 400 when resume text exceeds the 20,000 character limit', async () => {
+    const tooLong = buildLongText('x', 21_000)
+    const response = await POST(makeRequest({ resumeText: tooLong, jobDescription: 'Backend engineer role' }))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('sends the full resume and job description to Gemini without truncating', async () => {
     mockGenerateGeminiOnly.mockResolvedValue({
-      text: '{"tailoredResume":"ok","atsScore":90,"matchedSkills":[],"missingSkills":[],"suggestions":[],"summary":"done"}',
+      text: '{"offTopic":false,"tailoredResume":"ok","atsScore":90,"matchedSkills":[],"missingSkills":[],"suggestions":[],"summary":"done"}',
       model: 'gemma-4-31b-it',
       fallbackUsed: false,
       keyUsed: 'primary',
@@ -66,15 +73,41 @@ describe('POST /api/resume/tailor', () => {
     expect(mockGenerateGeminiOnly).toHaveBeenCalledOnce()
 
     const requestArg = mockGenerateGeminiOnly.mock.calls[0][0]
-    expect(requestArg.prompt).toContain(longResume.slice(0, 4000))
-    expect(requestArg.prompt).not.toContain(longResume.slice(4000))
-    expect(requestArg.prompt).toContain(longJobDescription.slice(0, 3000))
-    expect(requestArg.prompt).not.toContain(longJobDescription.slice(3000))
+    expect(requestArg.prompt).toContain(longResume)
+    expect(requestArg.prompt).toContain(longJobDescription)
+  })
+
+  it('instructs the model to write in the requested resume language', async () => {
+    mockGenerateGeminiOnly.mockResolvedValue({
+      text: '{"offTopic":false,"tailoredResume":"ok","atsScore":90,"matchedSkills":[],"missingSkills":[],"suggestions":[],"summary":"done"}',
+      model: 'gemma-4-31b-it',
+      fallbackUsed: false,
+      keyUsed: 'primary',
+    })
+
+    await POST(makeRequest({ resumeText: 'Resume', jobDescription: 'Job description', resumeLanguage: 'hi' }))
+
+    const requestArg = mockGenerateGeminiOnly.mock.calls[0][0]
+    expect(requestArg.prompt).toContain('Hindi')
+  })
+
+  it('defaults resumeLanguage to English when not provided', async () => {
+    mockGenerateGeminiOnly.mockResolvedValue({
+      text: '{"offTopic":false,"tailoredResume":"ok","atsScore":90,"matchedSkills":[],"missingSkills":[],"suggestions":[],"summary":"done"}',
+      model: 'gemma-4-31b-it',
+      fallbackUsed: false,
+      keyUsed: 'primary',
+    })
+
+    await POST(makeRequest({ resumeText: 'Resume', jobDescription: 'Job description' }))
+
+    const requestArg = mockGenerateGeminiOnly.mock.calls[0][0]
+    expect(requestArg.prompt).toContain('English')
   })
 
   it('parses fenced JSON responses from Gemini', async () => {
     mockGenerateGeminiOnly.mockResolvedValue({
-      text: '```json\n{"tailoredResume":"Tailored","atsScore":88,"matchedSkills":["SQL"],"missingSkills":["Python"],"suggestions":["Add metrics"],"summary":"Updated"}\n```',
+      text: '```json\n{"offTopic":false,"tailoredResume":"Tailored","atsScore":88,"matchedSkills":["SQL"],"missingSkills":["Python"],"suggestions":["Add metrics"],"summary":"Updated"}\n```',
       model: 'gemma-4-31b-it',
       fallbackUsed: false,
       keyUsed: 'primary',
@@ -91,7 +124,7 @@ describe('POST /api/resume/tailor', () => {
 
   it('strips think blocks before parsing JSON', async () => {
     mockGenerateGeminiOnly.mockResolvedValue({
-      text: '<think>hidden reasoning</think>\n{"tailoredResume":"Tailored","atsScore":77,"matchedSkills":[],"missingSkills":[],"suggestions":["Tighten bullets"],"summary":"Updated"}',
+      text: '<think>hidden reasoning</think>\n{"offTopic":false,"tailoredResume":"Tailored","atsScore":77,"matchedSkills":[],"missingSkills":[],"suggestions":["Tighten bullets"],"summary":"Updated"}',
       model: 'gemma-4-26b-a4b-it',
       fallbackUsed: true,
       keyUsed: 'secondary',
@@ -108,7 +141,7 @@ describe('POST /api/resume/tailor', () => {
 
   it('extracts the JSON object when Gemini adds extra wrapper text', async () => {
     mockGenerateGeminiOnly.mockResolvedValue({
-      text: 'Here is the result:\n{"tailoredResume":"Tailored","atsScore":82,"matchedSkills":["React"],"missingSkills":[],"suggestions":[],"summary":"Updated"}\nThanks!',
+      text: 'Here is the result:\n{"offTopic":false,"tailoredResume":"Tailored","atsScore":82,"matchedSkills":["React"],"missingSkills":[],"suggestions":[],"summary":"Updated"}\nThanks!',
       model: 'gemma-4-31b-it',
       fallbackUsed: false,
       keyUsed: 'primary',
@@ -119,6 +152,22 @@ describe('POST /api/resume/tailor', () => {
 
     expect(response.status).toBe(200)
     expect(payload.matchedSkills).toEqual(['React'])
+  })
+
+  it('returns 422 when the model flags the content as off-topic', async () => {
+    mockGenerateGeminiOnly.mockResolvedValue({
+      text: '{"offTopic":true,"tailoredResume":"","atsScore":0,"matchedSkills":[],"missingSkills":[],"suggestions":[],"summary":""}',
+      model: 'gemma-4-31b-it',
+      fallbackUsed: false,
+      keyUsed: 'primary',
+    })
+
+    const response = await POST(makeRequest({ resumeText: 'Tell me a joke about cats', jobDescription: 'lol' }))
+
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toEqual({
+      error: "This doesn't look like a resume and job description. Please paste real resume and job description text.",
+    })
   })
 
   it('returns 500 when Gemini responds with invalid JSON', async () => {

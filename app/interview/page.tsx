@@ -1,16 +1,18 @@
 'use client'
 
 import { FeatureComingSoon } from '@/components/feature-coming-soon'
+import { useLanguage } from '@/lib/i18n/context'
 
 export default function InterviewPage() {
+  const { t } = useLanguage()
   return (
     <FeatureComingSoon
-      featureName="Interview Practice"
-      summary="We removed interview practice from the production dashboard while we simplify and harden the core product experience. It will return only after the workflow is ready for a reliable public launch."
+      featureName={t('home.roadmap.interview')}
+      summary={t('comingSoon.interview.summary')}
       details={[
-        'Role-specific interview prompts and scoring are being reworked for a cleaner experience.',
-        'Voice and written practice flows need another validation pass before they return.',
-        'The live product currently focuses on resume tailoring because that path is ready today.',
+        t('comingSoon.interview.detail1'),
+        t('comingSoon.interview.detail2'),
+        t('comingSoon.detail.resumeLive'),
       ]}
     />
   )

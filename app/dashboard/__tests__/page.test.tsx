@@ -13,9 +13,12 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: vi.fn(),
 }))
 
-vi.mock('@/lib/i18n/context', () => ({
-  useLanguage: () => ({ t: (key: string) => ({ 'dash.welcome': 'Welcome back' }[key] || key) }),
-}))
+vi.mock('@/lib/i18n/context', async () => {
+  const { translations } = await import('@/lib/i18n/translations')
+  return {
+    useLanguage: () => ({ t: (key: string) => (translations.en as Record<string, string>)[key] || key }),
+  }
+})
 
 import { useAuth } from '@/hooks/useAuth'
 import DashboardPage from '../page'
@@ -61,6 +64,21 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/^settings$/i)).not.toBeInTheDocument()
   })
 
+  it('shows a coming-soon badge instead of the old Release Notes card', () => {
+    mockUseAuth.mockReturnValue({
+      user: { email: 'jane@example.com', user_metadata: { full_name: 'Jane' } } as any,
+      loading: false,
+      signIn: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+    })
+
+    render(<DashboardPage />)
+
+    expect(screen.getByText(/new features coming soon/i)).toBeInTheDocument()
+    expect(screen.queryByText(/release notes/i)).not.toBeInTheDocument()
+  })
+
   it('reads the resume count from localStorage', () => {
     localStorage.setItem('catalyst_resume_count', '7')
     mockUseAuth.mockReturnValue({
@@ -74,6 +92,8 @@ describe('DashboardPage', () => {
     render(<DashboardPage />)
 
     expect(screen.getByText('7')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /open resume builder/i })).toHaveAttribute('href', '/resume')
+    const builderLinks = screen.getAllByRole('link', { name: /open resume builder/i })
+    expect(builderLinks.length).toBeGreaterThan(0)
+    builderLinks.forEach((link) => expect(link).toHaveAttribute('href', '/resume'))
   })
 })

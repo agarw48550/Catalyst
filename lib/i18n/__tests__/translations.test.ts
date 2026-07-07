@@ -18,8 +18,13 @@ describe('translations completeness', () => {
         expect(mrKeys).toEqual(enKeys)
     })
 
+    it('Odia (or) has every key that English (en) has', () => {
+        const orKeys = Object.keys(translations.or).sort()
+        expect(orKeys).toEqual(enKeys)
+    })
+
     it('no translation value is empty or just whitespace', () => {
-        for (const lang of ['en', 'hi', 'mr'] as const) {
+        for (const lang of ['en', 'hi', 'mr', 'or'] as const) {
             for (const [key, value] of Object.entries(translations[lang])) {
                 expect(value.trim().length, `${lang}.${key} is empty`).toBeGreaterThan(0)
             }
@@ -28,7 +33,7 @@ describe('translations completeness', () => {
 })
 
 describe('Language type coverage', () => {
-    it('translations object has en, hi, and mr', () => {
-        expect(Object.keys(translations).sort()).toEqual(['en', 'hi', 'mr'])
+    it('translations object has en, hi, mr, and or', () => {
+        expect(Object.keys(translations).sort()).toEqual(['en', 'hi', 'mr', 'or'])
     })
 })

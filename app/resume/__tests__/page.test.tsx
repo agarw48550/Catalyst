@@ -9,6 +9,18 @@ vi.mock('@/lib/resume-pdf', () => ({
   generateResumePdfHtml: vi.fn(() => '<html><body>Resume PDF</body></html>'),
 }))
 
+vi.mock('@/lib/i18n/context', async () => {
+  const { translations } = await import('@/lib/i18n/translations')
+  return {
+    useLanguage: () => ({
+      lang: 'en',
+      t: (key: string) => (translations.en as Record<string, string>)[key] || key,
+    }),
+    LANG_CYCLE: ['en', 'hi', 'mr', 'or'],
+    LANG_LABELS: { en: 'English', hi: 'हिंदी', mr: 'मराठी', or: 'ଓଡ଼ିଆ' },
+  }
+})
+
 import ResumePage from '../page'
 
 describe('ResumePage', () => {
@@ -39,7 +51,7 @@ describe('ResumePage', () => {
     expect(screen.getByText(/resume builder/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/your resume/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/job description/i)).toBeInTheDocument()
-    expect(screen.getByText(/what you will get/i)).toBeInTheDocument()
+    expect(screen.getByText(/what you'll get/i)).toBeInTheDocument()
   })
 
   it('shows a client-side error for non-PDF uploads', async () => {
@@ -113,6 +125,43 @@ describe('ResumePage', () => {
     expect(await screen.findByText(/ats score/i)).toBeInTheDocument()
     expect(await screen.findByText('Tailored resume content')).toBeInTheDocument()
     expect(localStorage.getItem('catalyst_resume_count')).toBe('1')
+  })
+
+  it('sends the selected resume language with the tailor request', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        tailoredResume: 'Tailored resume content',
+        atsScore: 91,
+        matchedSkills: [],
+        missingSkills: [],
+        suggestions: [],
+        summary: 'Updated.',
+      }),
+    })
+
+    render(<ResumePage />)
+
+    fireEvent.change(screen.getByLabelText(/your resume/i), { target: { value: 'Current resume' } })
+    fireEvent.change(screen.getByLabelText(/job description/i), { target: { value: 'A job.' } })
+    fireEvent.change(screen.getByLabelText(/resume language/i), { target: { value: 'hi' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /tailor my resume/i }))
+
+    await screen.findByText('Tailored resume content')
+
+    const [, requestInit] = fetchMock.mock.calls[0]
+    expect(JSON.parse(requestInit.body).resumeLanguage).toBe('hi')
+  })
+
+  it('shows a live character counter for the resume textarea', () => {
+    render(<ResumePage />)
+
+    expect(screen.getAllByText('0 / 20000')).toHaveLength(2)
+
+    fireEvent.change(screen.getByLabelText(/your resume/i), { target: { value: 'Hello' } })
+
+    expect(screen.getByText('5 / 20000')).toBeInTheDocument()
   })
 
   it('shows an API error when tailoring fails', async () => {

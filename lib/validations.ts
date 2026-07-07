@@ -14,11 +14,17 @@ const safeString = (max: number) =>
     z.string().transform(sanitize).pipe(z.string().min(1).max(max))
 
 // ── Resume Tailor ───────────────────────────────────────────────────
+export const RESUME_INPUT_MAX_CHARS = 20_000
+
+export const resumeOutputLanguageSchema = z.enum(['en', 'hi', 'mr', 'or'])
+export type ResumeOutputLanguage = z.infer<typeof resumeOutputLanguageSchema>
+
 export const resumeTailorSchema = z.object({
-    resumeText: safeString(10_000),
+    resumeText: safeString(RESUME_INPUT_MAX_CHARS),
     jobTitle: z.string().max(200).optional().default(''),
     company: z.string().max(200).optional().default(''),
-    jobDescription: safeString(10_000),
+    jobDescription: safeString(RESUME_INPUT_MAX_CHARS),
+    resumeLanguage: resumeOutputLanguageSchema.optional().default('en'),
 })
 export type ResumeTailorInput = z.infer<typeof resumeTailorSchema>
 

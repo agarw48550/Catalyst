@@ -119,6 +119,17 @@ export const config = {
   },
 } as const
 
+// Real Google API keys are always 39 chars, starting with "AIzaSy"
+const GEMINI_KEY_SHAPE = /^AIzaSy[\w-]{33}$/
+
+function warnIfMalformedGeminiKey(name: string, value: string) {
+  if (value && !GEMINI_KEY_SHAPE.test(value)) {
+    console.warn(
+      `⚠️  ${name} looks malformed (length ${value.length}, expected 39 chars starting with "AIzaSy"). Gemini will reject it with a 400 "API key not valid" error.`
+    )
+  }
+}
+
 /**
  * Validate that all required environment variables are set
  */
@@ -137,6 +148,11 @@ export function validateConfig(): { valid: boolean; errors: string[] } {
   if (!config.gemini.apiKey) {
     errors.push('GEMINI_API_KEY is required')
   }
+
+  // Warn (non-blocking) if any configured Gemini key doesn't look like a real Google API key
+  warnIfMalformedGeminiKey('GEMINI_API_KEY', config.gemini.apiKey)
+  warnIfMalformedGeminiKey('GEMINI_API_KEY_SECONDARY', config.gemini.apiKeySecondary)
+  warnIfMalformedGeminiKey('GEMINI_API_KEY_TERTIARY', config.gemini.apiKeyTertiary)
 
   // Warn if no email service is configured (non-blocking)
   if (!config.email.mailgun.apiKey && !config.email.resend.apiKey) {

@@ -1,16 +1,18 @@
 'use client'
 
 import { FeatureComingSoon } from '@/components/feature-coming-soon'
+import { useLanguage } from '@/lib/i18n/context'
 
 export default function SettingsPage() {
+  const { t } = useLanguage()
   return (
     <FeatureComingSoon
-      featureName="Account Settings"
-      summary="The custom settings page has been removed from the production dashboard while account management is cleaned up. The only supported account controls in the live product are the ones provided by Clerk."
+      featureName={t('dash.settings')}
+      summary={t('comingSoon.settings.summary')}
       details={[
-        'We are retiring the legacy Supabase-based settings workflow from the public surface.',
-        'Future settings pages will only return once they match the live authentication setup.',
-        'For now, resume tailoring stays as the only active in-app workflow beyond Clerk account controls.',
+        t('comingSoon.settings.detail1'),
+        t('comingSoon.settings.detail2'),
+        t('comingSoon.detail.resumeLive'),
       ]}
     />
   )

@@ -9,6 +9,13 @@ vi.mock('@/components/app-header', () => ({
   AppHeader: () => <div>Header</div>,
 }))
 
+vi.mock('@/lib/i18n/context', async () => {
+  const { translations } = await import('@/lib/i18n/translations')
+  return {
+    useLanguage: () => ({ t: (key: string) => (translations.en as Record<string, string>)[key] || key }),
+  }
+})
+
 import InterviewPage from '../interview/page'
 import JobsPage from '../jobs/page'
 import ResearchPage from '../research/page'
@@ -38,7 +45,7 @@ describe('coming soon product pages', () => {
   it('renders the settings roadmap page with the Clerk note', () => {
     render(<SettingsPage />)
 
-    expect(screen.getByText(/account settings is on the roadmap/i)).toBeInTheDocument()
-    expect(screen.getByText(/provided by clerk/i)).toBeInTheDocument()
+    expect(screen.getByText(/settings is on the roadmap/i)).toBeInTheDocument()
+    expect(screen.getByText(/managed by clerk/i)).toBeInTheDocument()
   })
 })

@@ -1,16 +1,18 @@
 'use client'
 
 import { FeatureComingSoon } from '@/components/feature-coming-soon'
+import { useLanguage } from '@/lib/i18n/context'
 
 export default function ResearchPage() {
+  const { t } = useLanguage()
   return (
     <FeatureComingSoon
-      featureName="Career Research"
-      summary="Career research is on the roadmap, but it is not being offered as a production feature yet. We removed the live workflow so the current release stays focused, accurate, and supportable."
+      featureName={t('home.roadmap.research')}
+      summary={t('comingSoon.research.summary')}
       details={[
-        'The research experience needs stronger source grounding before it returns.',
-        'We are redesigning the output so advice is easier to verify and act on.',
-        'Today’s launch keeps the product centered on resume tailoring and ATS guidance.',
+        t('comingSoon.research.detail1'),
+        t('comingSoon.research.detail2'),
+        t('comingSoon.detail.resumeLive'),
       ]}
     />
   )

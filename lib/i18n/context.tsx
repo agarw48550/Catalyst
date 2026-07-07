@@ -1,12 +1,33 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { Globe } from 'lucide-react'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { translations, type Language, type TranslationKey } from './translations'
 
 interface LanguageContextType {
     lang: Language
     setLang: (lang: Language) => void
     t: (key: TranslationKey) => string
+}
+
+export const LANG_CYCLE: Language[] = ['en', 'hi', 'mr', 'or']
+export const LANG_LABELS: Record<Language, string> = {
+    en: 'English',
+    hi: 'हिंदी',
+    mr: 'मराठी',
+    or: 'ଓଡ଼ିଆ',
+}
+const LANG_SHORT: Record<Language, string> = {
+    en: 'EN',
+    hi: 'हि',
+    mr: 'मरा',
+    or: 'ଓଡ',
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -20,7 +41,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const saved = localStorage.getItem('catalyst-lang') as Language | null
-        if (saved && (saved === 'en' || saved === 'hi' || saved === 'mr')) {
+        if (saved && LANG_CYCLE.includes(saved)) {
             setLangState(saved)
         }
     }, [])
@@ -46,26 +67,41 @@ export function useLanguage() {
     return useContext(LanguageContext)
 }
 
-const LANG_CYCLE: Language[] = ['en', 'hi', 'mr']
-const LANG_LABELS: Record<Language, string> = {
-    en: 'EN',
-    hi: 'हिंदी',
-    mr: 'मराठी',
-}
-
 export function LanguageToggle() {
     const { lang, setLang } = useLanguage()
-    const currentIdx = LANG_CYCLE.indexOf(lang)
-    const nextLang = LANG_CYCLE[(currentIdx + 1) % LANG_CYCLE.length]
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => setMounted(true), [])
+
+    if (!mounted) {
+        return (
+            <button
+                className="flex items-center gap-1.5 rounded-full border border-border/50 px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                aria-label="Change language"
+            >
+                <Globe className="h-3.5 w-3.5" />
+                <span>{LANG_SHORT.en}</span>
+            </button>
+        )
+    }
+
     return (
-        <button
-            onClick={() => setLang(nextLang)}
-            className="px-2.5 py-1 text-xs font-medium rounded-full border border-border/50 hover:bg-accent transition-colors"
-            title={`Switch to ${LANG_LABELS[nextLang]}`}
-            aria-label={`Current language: ${LANG_LABELS[lang]}. Click to switch to ${LANG_LABELS[nextLang]}`}
-        >
-            {LANG_LABELS[lang]}
-        </button>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    className="flex items-center gap-1.5 rounded-full border border-border/50 px-3 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
+                    aria-label={`Language: ${LANG_LABELS[lang]}. Click to change.`}
+                >
+                    <Globe className="h-3.5 w-3.5" />
+                    <span>{LANG_SHORT[lang]}</span>
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                {LANG_CYCLE.map((code) => (
+                    <DropdownMenuItem key={code} active={code === lang} onSelect={() => setLang(code)}>
+                        {LANG_LABELS[code]}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }
-

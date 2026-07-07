@@ -22,7 +22,7 @@ export default function HomePage() {
   }, [isLoaded, isSignedIn, router])
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white selection:bg-primary selection:text-white">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-white">
       <header className="sticky top-0 z-50 border-b bg-background/75 backdrop-blur-xl">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-8">
@@ -34,15 +34,12 @@ export default function HomePage() {
             </Link>
 
             <nav className="hidden items-center gap-1 lg:flex">
-              <Link href="/about" className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300">
+              <Link href="/about" className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
                 {t('nav.about')}
               </Link>
-              <Link href="/features" className="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-primary dark:text-slate-300">
+              <Link href="/features" className="px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
                 {t('nav.features')}
               </Link>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                Resume-first
-              </span>
             </nav>
           </div>
 
@@ -51,7 +48,7 @@ export default function HomePage() {
             <LanguageToggle />
             <div className="hidden items-center gap-2 sm:flex">
               <SignInButton mode="modal">
-                <Button variant="ghost" className="font-semibold text-slate-600 hover:text-primary dark:text-slate-300">
+                <Button variant="ghost" className="font-semibold text-muted-foreground hover:text-primary">
                   {t('nav.login')}
                 </Button>
               </SignInButton>
@@ -71,62 +68,44 @@ export default function HomePage() {
           <div className="container relative mx-auto px-4">
             <div className="mx-auto max-w-4xl text-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-                <Sparkles className="h-3.5 w-3.5" />
-                Production-ready today
+                {t('home.badge')}
               </div>
 
-              <h1 className="mt-8 text-5xl font-black tracking-tight text-slate-900 dark:text-white sm:text-6xl md:text-7xl">
-                Resume tailoring that is ready for real job applications.
+              <h1 className="mt-8 text-5xl font-black tracking-tight text-foreground sm:text-6xl md:text-7xl">
+                {t('home.title')}
               </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">
-                Catalyst currently focuses on one live workflow: helping you tailor your resume to a target role,
-                review ATS-oriented feedback, and export a cleaner draft.
+              <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+                {t('home.subtitle')}
               </p>
 
               <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <SignUpButton mode="modal">
                   <Button size="xl" className="h-14 rounded-2xl px-8 text-base font-bold shadow-xl shadow-primary/25">
-                    Start with Resume Builder <ArrowRight className="ml-2 h-4 w-4" />
+                    {t('home.ctaPrimary')} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </SignUpButton>
                 <Link href="/features">
                   <Button size="xl" variant="outline" className="h-14 rounded-2xl px-8 text-base font-semibold">
-                    See what is live
+                    {t('home.ctaSecondary')}
                   </Button>
                 </Link>
               </div>
 
               <div className="mt-16 grid gap-4 text-left md:grid-cols-3">
-                <ValueCard
-                  icon={<FileText className="h-5 w-5" />}
-                  title="Resume-focused"
-                  description="The current release is intentionally scoped to one workflow that we can support well."
-                />
-                <ValueCard
-                  icon={<UserRoundCheck className="h-5 w-5" />}
-                  title="Built for targeted applications"
-                  description="Paste a job description and tailor your existing resume for that specific opportunity."
-                />
-                <ValueCard
-                  icon={<Clock3 className="h-5 w-5" />}
-                  title="Roadmap, not hype"
-                  description="Interview practice, job search, and research are visible only as coming-soon roadmap items."
-                />
+                <ValueCard icon={<FileText className="h-5 w-5" />} title={t('home.value1.title')} description={t('home.value1.desc')} />
+                <ValueCard icon={<UserRoundCheck className="h-5 w-5" />} title={t('home.value2.title')} description={t('home.value2.desc')} />
+                <ValueCard icon={<Clock3 className="h-5 w-5" />} title={t('home.value3.title')} description={t('home.value3.desc')} />
               </div>
             </div>
           </div>
         </section>
 
-        <section className="bg-slate-50 py-24 dark:bg-slate-900/50">
+        <section className="bg-muted/40 py-24">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">What is live</p>
-              <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                One active workflow, polished for launch
-              </h2>
-              <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-                The dashboard now centers on the Resume Builder instead of a spread of partially finished tools.
-              </p>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">{t('home.live.label')}</p>
+              <h2 className="mt-4 text-4xl font-black tracking-tight text-foreground">{t('home.live.title')}</h2>
+              <p className="mt-4 text-lg text-muted-foreground">{t('home.live.subtitle')}</p>
             </div>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -137,43 +116,28 @@ export default function HomePage() {
                       <FileText className="h-6 w-6" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white">Resume Builder</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Active now</p>
+                      <h3 className="text-2xl font-black text-foreground">{t('dash.resumeBuilder')}</h3>
+                      <p className="text-sm text-muted-foreground">{t('common.liveNow')}</p>
                     </div>
                   </div>
-                  <ul className="mt-6 space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    <li>Upload a PDF resume or paste your current resume text.</li>
-                    <li>Tailor it to a specific job title, company, and description.</li>
-                    <li>Review ATS score, matched skills, missing skills, and actionable suggestions.</li>
-                    <li>Copy the result or export it to a printable PDF.</li>
+                  <ul className="mt-6 space-y-3 text-sm leading-6 text-muted-foreground">
+                    <li>{t('home.live.bullet1')}</li>
+                    <li>{t('home.live.bullet2')}</li>
+                    <li>{t('home.live.bullet3')}</li>
+                    <li>{t('home.live.bullet4')}</li>
                   </ul>
                   <div className="mt-8">
                     <SignUpButton mode="modal">
-                      <Button className="rounded-xl font-bold">Try Resume Builder</Button>
+                      <Button className="rounded-xl font-bold">{t('home.live.cta')}</Button>
                     </SignUpButton>
                   </div>
                 </CardContent>
               </Card>
 
               <div className="grid gap-4">
-                <RoadmapCard
-                  href="/interview"
-                  icon={<Sparkles className="h-5 w-5" />}
-                  title="Interview Practice"
-                  description="Roadmap only. The live workflow is offline until it is ready for production."
-                />
-                <RoadmapCard
-                  href="/jobs"
-                  icon={<Search className="h-5 w-5" />}
-                  title="Job Search"
-                  description="Roadmap only. Search and saved-job flows were removed from the production surface."
-                />
-                <RoadmapCard
-                  href="/research"
-                  icon={<TrendingUp className="h-5 w-5" />}
-                  title="Career Research"
-                  description="Roadmap only. Research outputs will return after a stronger grounding pass."
-                />
+                <RoadmapCard href="/interview" icon={<Sparkles className="h-5 w-5" />} title={t('home.roadmap.interview')} />
+                <RoadmapCard href="/jobs" icon={<Search className="h-5 w-5" />} title={t('home.roadmap.jobs')} />
+                <RoadmapCard href="/research" icon={<TrendingUp className="h-5 w-5" />} title={t('home.roadmap.research')} />
               </div>
             </div>
           </div>
@@ -181,26 +145,12 @@ export default function HomePage() {
 
         <section className="py-24">
           <div className="container mx-auto px-4 text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">How it works</p>
-            <h2 className="mt-4 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              A simpler launch path
-            </h2>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">{t('home.how.label')}</p>
+            <h2 className="mt-4 text-4xl font-black tracking-tight text-foreground">{t('home.how.title')}</h2>
             <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
-              <StepCard
-                step="01"
-                title="Create your account"
-                description="Sign in and open the dashboard for the production workflow."
-              />
-              <StepCard
-                step="02"
-                title="Add your resume and target role"
-                description="Paste text or upload a PDF, then provide the job description you want to target."
-              />
-              <StepCard
-                step="03"
-                title="Refine and export"
-                description="Use the tailored output, ATS score, and skill guidance to strengthen your application."
-              />
+              <StepCard step="01" title={t('home.how.step1.title')} description={t('home.how.step1.desc')} />
+              <StepCard step="02" title={t('home.how.step2.title')} description={t('home.how.step2.desc')} />
+              <StepCard step="03" title={t('home.how.step3.title')} description={t('home.how.step3.desc')} />
             </div>
           </div>
         </section>
@@ -216,22 +166,20 @@ export default function HomePage() {
                 </div>
                 <span className="text-lg font-black text-white">Catalyst</span>
               </div>
-              <p className="mt-4 text-sm leading-6 text-slate-400">
-                A resume-first career product focused on a single workflow that is ready today.
-              </p>
+              <p className="mt-4 text-sm leading-6 text-slate-400">{t('home.footer.desc')}</p>
             </div>
 
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-white">Product</h3>
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-white">{t('footer.product')}</h3>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/features" className="transition-colors hover:text-primary">{t('nav.features')}</Link></li>
                 <li><Link href="/resume" className="transition-colors hover:text-primary">{t('nav.resume')}</Link></li>
-                <li><Link href="/interview" className="transition-colors hover:text-primary">Interview Practice (Coming Soon)</Link></li>
+                <li><Link href="/interview" className="transition-colors hover:text-primary">{t('home.roadmap.interview')} · {t('common.comingSoon')}</Link></li>
               </ul>
             </div>
 
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-white">Company</h3>
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-white">{t('footer.company')}</h3>
               <ul className="mt-4 space-y-3 text-sm">
                 <li><Link href="/about" className="transition-colors hover:text-primary">{t('nav.about')}</Link></li>
                 <li><Link href="/auth/login" className="transition-colors hover:text-primary">{t('nav.login')}</Link></li>
@@ -240,10 +188,8 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-white">Status</h3>
-              <p className="mt-4 text-sm leading-6 text-slate-400">
-                The production release currently supports resume tailoring only. Other tools remain on the roadmap until they are launch-ready.
-              </p>
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-white">{t('home.footer.status.title')}</h3>
+              <p className="mt-4 text-sm leading-6 text-slate-400">{t('home.footer.status.desc')}</p>
             </div>
           </div>
 
@@ -267,8 +213,8 @@ function ValueCard({
     <Card className="border-0 shadow-sm">
       <CardContent className="p-6">
         <div className="rounded-2xl bg-primary/10 p-3 text-primary w-fit">{icon}</div>
-        <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+        <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   )
@@ -278,22 +224,23 @@ function RoadmapCard({
   href,
   icon,
   title,
-  description,
 }: {
   href: string
   icon: React.ReactNode
   title: string
-  description: string
 }) {
+  const { t } = useLanguage()
   return (
     <Link href={href} className="block">
       <Card className="h-full border-0 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-        <CardContent className="p-6">
-          <div className="rounded-2xl bg-slate-100 p-3 text-slate-700 w-fit dark:bg-slate-900 dark:text-slate-200">
+        <CardContent className="flex items-center gap-3 p-6">
+          <div className="rounded-2xl bg-muted p-3 text-foreground w-fit">
             {icon}
           </div>
-          <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+          <div>
+            <h3 className="text-base font-bold text-foreground">{title}</h3>
+            <p className="text-xs text-muted-foreground">{t('common.comingSoon')}</p>
+          </div>
         </CardContent>
       </Card>
     </Link>
@@ -312,9 +259,9 @@ function StepCard({
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="p-8 text-left">
-        <div className="text-5xl font-black tracking-tight text-slate-100 dark:text-slate-800">{step}</div>
-        <h3 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">{title}</h3>
-        <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+        <div className="text-5xl font-black tracking-tight text-muted/60">{step}</div>
+        <h3 className="mt-4 text-xl font-bold text-foreground">{title}</h3>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   )

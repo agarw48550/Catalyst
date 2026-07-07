@@ -1,8 +1,8 @@
-# Project Catalyst (RozgarSathi) 🚀
+# Project Catalyst 🚀
 
 **AI-Powered Career Platform for India**
 
-Catalyst (RozgarSathi) is a comprehensive career acceleration platform that leverages Google Gemini AI, job aggregation APIs, and intelligent fallback systems to help job seekers in India build better resumes, practice interviews, find jobs, and research career opportunities.
+Catalyst is a comprehensive career acceleration platform that leverages Google Gemini AI, job aggregation APIs, and intelligent fallback systems to help job seekers in India build better resumes, practice interviews, find jobs, and research career opportunities.
 
 ---
 

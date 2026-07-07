@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Download, FileText, Upload, X } from 'lucide-react'
+import { Download, FileText, HelpCircle, Upload, X } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { LoadingBar } from '@/components/ui/loading-bar'
 import { generateResumePdfHtml } from '@/lib/resume-pdf'
+import { RESUME_INPUT_MAX_CHARS, type ResumeOutputLanguage } from '@/lib/validations'
+import { LANG_CYCLE, LANG_LABELS, useLanguage } from '@/lib/i18n/context'
 
 interface TailorResult {
   tailoredResume: string
@@ -21,10 +23,12 @@ interface TailorResult {
 }
 
 export default function ResumePage() {
+  const { t, lang } = useLanguage()
   const [resumeText, setResumeText] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [company, setCompany] = useState('')
   const [jobDescription, setJobDescription] = useState('')
+  const [resumeLanguage, setResumeLanguage] = useState<ResumeOutputLanguage>(lang)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<TailorResult | null>(null)
@@ -38,12 +42,12 @@ export default function ResumePage() {
     if (!file) return
 
     if (file.type !== 'application/pdf') {
-      setError('Please upload a PDF resume.')
+      setError(t('resume.errorNonPdf'))
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('PDF must be under 5MB.')
+      setError(t('resume.errorTooLarge'))
       return
     }
 
@@ -62,13 +66,13 @@ export default function ResumePage() {
 
       if (!response.ok) {
         const payload = await response.json()
-        throw new Error(payload.error || 'Failed to parse PDF.')
+        throw new Error(payload.error || t('resume.errorParseFailed'))
       }
 
       const payload = await response.json()
-      setResumeText(payload.text)
+      setResumeText(payload.text.slice(0, RESUME_INPUT_MAX_CHARS))
     } catch (uploadError: any) {
-      setError(uploadError.message || 'Failed to parse PDF.')
+      setError(uploadError.message || t('resume.errorParseFailed'))
       setPdfFileName(null)
     } finally {
       setPdfLoading(false)
@@ -84,12 +88,12 @@ export default function ResumePage() {
       const response = await fetch('/api/resume/tailor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeText, jobTitle, company, jobDescription }),
+        body: JSON.stringify({ resumeText, jobTitle, company, jobDescription, resumeLanguage }),
       })
 
       if (!response.ok) {
         const payload = await response.json()
-        throw new Error(payload.error || 'Failed to tailor resume.')
+        throw new Error(payload.error || t('resume.errorTailorFailed'))
       }
 
       const payload = await response.json()
@@ -98,7 +102,7 @@ export default function ResumePage() {
       const nextCount = parseInt(localStorage.getItem('catalyst_resume_count') || '0', 10) + 1
       localStorage.setItem('catalyst_resume_count', String(nextCount))
     } catch (submitError: any) {
-      setError(submitError.message || 'Failed to tailor resume.')
+      setError(submitError.message || t('resume.errorTailorFailed'))
     } finally {
       setLoading(false)
     }
@@ -141,34 +145,38 @@ export default function ResumePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 selection:bg-primary selection:text-white">
+    <div className="min-h-screen bg-background selection:bg-primary selection:text-white">
       <AppHeader />
 
       <main id="main-content" className="container mx-auto px-4 py-8">
         <div className="mb-8 grid gap-6 lg:grid-cols-[1.35fr_0.95fr]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              <FileText className="h-3.5 w-3.5" />
-              Live Workflow
+              {t('common.liveNow')}
             </div>
-            <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              Resume Builder
+            <h1 className="mt-4 text-4xl font-black tracking-tight text-foreground">
+              {t('dash.resumeBuilder')}
             </h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
-              Paste your resume and a job description, or upload a PDF resume, to generate a cleaner
-              ATS-focused draft with matched skills, missing skills, and revision suggestions.
+            <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
+              {t('resume.pageDesc')}
             </p>
           </div>
 
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle>Before you start</CardTitle>
-              <CardDescription>This workflow is optimized for targeted tailoring, not full resume authoring from scratch.</CardDescription>
+              <CardTitle>{t('resume.before.title')}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              <p>Upload a PDF under 5MB or paste plain resume text.</p>
-              <p>Add the exact job description for the best results.</p>
-              <p>Review the output before using it in applications.</p>
+            <CardContent className="space-y-2 text-sm leading-6 text-muted-foreground">
+              <p>{t('resume.before.bullet1')}</p>
+              <p>{t('resume.before.bullet2')}</p>
+              <p>{t('resume.before.bullet3')}</p>
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-dashed border-border p-3">
+                <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div>
+                  <p className="font-semibold text-foreground">{t('resume.atsInfo.title')}</p>
+                  <p className="mt-1">{t('resume.atsInfo.desc')}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -176,13 +184,13 @@ export default function ResumePage() {
         <div className="grid gap-8 lg:grid-cols-2">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle>Your Inputs</CardTitle>
-              <CardDescription>Provide your current resume content and the role you want to target.</CardDescription>
+              <CardTitle>{t('resume.inputs.title')}</CardTitle>
+              <CardDescription>{t('resume.inputs.desc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="resumeText">Your Resume</Label>
+                  <Label htmlFor="resumeText">{t('resume.inputLabel')}</Label>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
@@ -193,19 +201,23 @@ export default function ResumePage() {
                       disabled={pdfLoading}
                     >
                       <Upload className="h-4 w-4" />
-                      {pdfLoading ? 'Parsing PDF...' : 'Upload PDF'}
+                      {pdfLoading ? t('resume.parsingPdf') : t('resume.uploadPdf')}
                     </Button>
 
                     {pdfFileName && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                         <FileText className="h-3 w-3" />
                         {pdfFileName}
-                        <button type="button" onClick={clearUploadedPdf} aria-label="Remove uploaded PDF">
+                        <button type="button" onClick={clearUploadedPdf} aria-label={t('resume.removePdf')}>
                           <X className="h-3 w-3 hover:text-destructive" />
                         </button>
                       </span>
                     )}
                   </div>
+
+                  {pdfLoading && (
+                    <LoadingBar active={pdfLoading} estimatedTime={4} label={t('resume.parsingLabel')} />
+                  )}
 
                   <input
                     ref={fileInputRef}
@@ -218,43 +230,69 @@ export default function ResumePage() {
                   <textarea
                     id="resumeText"
                     className="min-h-[220px] w-full resize-y rounded-md border bg-background p-3 text-sm"
-                    placeholder="Paste your resume text here, or upload a PDF above."
+                    placeholder={t('resume.resumePlaceholder')}
                     value={resumeText}
                     onChange={(event) => setResumeText(event.target.value)}
+                    maxLength={RESUME_INPUT_MAX_CHARS}
                     required
                   />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {resumeText.length} / {RESUME_INPUT_MAX_CHARS}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="jobTitle">{t('resume.jobTitle')}</Label>
+                    <Input
+                      id="jobTitle"
+                      placeholder="e.g. Product Analyst"
+                      value={jobTitle}
+                      onChange={(event) => setJobTitle(event.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="company">{t('resume.company')}</Label>
+                    <Input
+                      id="company"
+                      placeholder="e.g. Razorpay"
+                      value={company}
+                      onChange={(event) => setCompany(event.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job Title</Label>
-                  <Input
-                    id="jobTitle"
-                    placeholder="e.g. Product Analyst"
-                    value={jobTitle}
-                    onChange={(event) => setJobTitle(event.target.value)}
-                  />
+                  <Label htmlFor="resumeLanguage">{t('resume.outputLanguage')}</Label>
+                  <select
+                    id="resumeLanguage"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={resumeLanguage}
+                    onChange={(event) => setResumeLanguage(event.target.value as ResumeOutputLanguage)}
+                  >
+                    {LANG_CYCLE.map((code) => (
+                      <option key={code} value={code}>
+                        {LANG_LABELS[code]}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="company">Company (optional)</Label>
-                  <Input
-                    id="company"
-                    placeholder="e.g. Razorpay"
-                    value={company}
-                    onChange={(event) => setCompany(event.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="jobDescription">Job Description</Label>
+                  <Label htmlFor="jobDescription">{t('resume.jdLabel')}</Label>
                   <textarea
                     id="jobDescription"
                     className="min-h-[180px] w-full resize-y rounded-md border bg-background p-3 text-sm"
-                    placeholder="Paste the target job description here."
+                    placeholder={t('resume.jdPlaceholder')}
                     value={jobDescription}
                     onChange={(event) => setJobDescription(event.target.value)}
+                    maxLength={RESUME_INPUT_MAX_CHARS}
                     required
                   />
+                  <p className="text-right text-xs text-muted-foreground">
+                    {jobDescription.length} / {RESUME_INPUT_MAX_CHARS}
+                  </p>
                 </div>
 
                 {error && (
@@ -262,7 +300,7 @@ export default function ResumePage() {
                 )}
 
                 <Button type="submit" className="w-full font-bold" disabled={loading}>
-                  {loading ? 'Tailoring Resume...' : 'Tailor My Resume'}
+                  {loading ? t('resume.loading') : t('resume.submit')}
                 </Button>
               </form>
             </CardContent>
@@ -272,15 +310,11 @@ export default function ResumePage() {
             {loading && (
               <Card className="border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Tailoring your resume</CardTitle>
-                  <CardDescription>The AI is comparing your resume against the target role.</CardDescription>
+                  <CardTitle>{t('resume.tailoringTitle')}</CardTitle>
+                  <CardDescription>{t('resume.tailoringDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <LoadingBar
-                    active={loading}
-                    estimatedTime={20}
-                    label="Analyzing your resume, extracting key requirements, and drafting a tailored version..."
-                  />
+                  <LoadingBar active={loading} estimatedTime={20} label={t('resume.tailoringLabel')} />
                 </CardContent>
               </Card>
             )}
@@ -289,13 +323,13 @@ export default function ResumePage() {
               <>
                 <Card className="border-0 shadow-sm">
                   <CardHeader>
-                    <CardTitle>ATS Score</CardTitle>
+                    <CardTitle>{t('resume.atsScoreTitle')}</CardTitle>
                     <CardDescription>{result.summary}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-4">
                       <Progress value={result.atsScore} className="flex-1" />
-                      <span className="text-2xl font-black text-slate-900 dark:text-white">{result.atsScore}%</span>
+                      <span className="text-2xl font-black text-foreground">{result.atsScore}%</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -303,16 +337,16 @@ export default function ResumePage() {
                 <Card className="border-0 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle>Tailored Resume</CardTitle>
-                      <CardDescription>Review and refine before using it in an application.</CardDescription>
+                      <CardTitle>{t('resume.tailoredTitle')}</CardTitle>
+                      <CardDescription>{t('resume.tailoredDesc')}</CardDescription>
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={handleDownloadPdf} className="gap-1.5">
                         <Download className="h-3.5 w-3.5" />
-                        PDF
+                        {t('resume.pdfButton')}
                       </Button>
                       <Button variant="outline" size="sm" onClick={handleCopy}>
-                        {copied ? 'Copied!' : 'Copy'}
+                        {copied ? t('resume.copiedButton') : t('resume.copyButton')}
                       </Button>
                     </div>
                   </CardHeader>
@@ -326,7 +360,7 @@ export default function ResumePage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Card className="border-0 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-sm text-green-700 dark:text-green-400">Matched Skills</CardTitle>
+                      <CardTitle className="text-sm text-green-700 dark:text-green-400">{t('resume.matchedSkills')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
@@ -344,7 +378,7 @@ export default function ResumePage() {
 
                   <Card className="border-0 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-sm text-orange-700 dark:text-orange-400">Missing Skills</CardTitle>
+                      <CardTitle className="text-sm text-orange-700 dark:text-orange-400">{t('resume.missingSkills')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
@@ -363,12 +397,12 @@ export default function ResumePage() {
 
                 <Card className="border-0 shadow-sm">
                   <CardHeader>
-                    <CardTitle>Suggestions</CardTitle>
+                    <CardTitle>{t('resume.suggestionsTitle')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
                       {result.suggestions.map((suggestion, index) => (
-                        <li key={index} className="flex gap-2 text-sm text-slate-700 dark:text-slate-200">
+                        <li key={index} className="flex gap-2 text-sm text-foreground">
                           <span className="text-primary">•</span>
                           <span>{suggestion}</span>
                         </li>
@@ -382,13 +416,12 @@ export default function ResumePage() {
             {!result && !loading && (
               <Card className="border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle>What you will get</CardTitle>
-                  <CardDescription>A tailored output appears here after you submit the form.</CardDescription>
+                  <CardTitle>{t('resume.emptyTitle')}</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  <p>A concise resume draft aligned to the role you are targeting.</p>
-                  <p>An ATS score estimate, matched skills, missing skills, and practical revision suggestions.</p>
-                  <p>You can copy the output directly or export it to a printable PDF.</p>
+                <CardContent className="space-y-2 text-sm leading-6 text-muted-foreground">
+                  <p>{t('resume.emptyBullet1')}</p>
+                  <p>{t('resume.emptyBullet2')}</p>
+                  <p>{t('resume.emptyBullet3')}</p>
                 </CardContent>
               </Card>
             )}

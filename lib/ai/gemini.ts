@@ -117,10 +117,6 @@ async function generateContentWithCandidates({
   const availableKeys = getAvailableKeys(clients)
   const requestedModel = modelCandidates[0]
 
-  // #region agent log
-  fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H1',location:'lib/ai/gemini.ts:119',message:'Gemini request starting',data:{modelCandidates,availableKeys,keyPresence:{primary:{present:Boolean(process.env.GEMINI_API_KEY),length:process.env.GEMINI_API_KEY?.trim().length||0},secondary:{present:Boolean(process.env.GEMINI_API_KEY_SECONDARY),length:process.env.GEMINI_API_KEY_SECONDARY?.trim().length||0},tertiary:{present:Boolean(process.env.GEMINI_API_KEY_TERTIARY),length:process.env.GEMINI_API_KEY_TERTIARY?.trim().length||0}}},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   let lastError: Error | null = null
 
   for (const model of modelCandidates) {
@@ -128,9 +124,6 @@ async function generateContentWithCandidates({
       const client = clients.get(keyType)!
 
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H2',location:'lib/ai/gemini.ts:130',message:'Gemini attempt',data:{model,keyType,requestedModel},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         const generativeModel = client.getGenerativeModel({
           model,
           systemInstruction,
@@ -152,10 +145,6 @@ async function generateContentWithCandidates({
           console.log(`✓ Model fallback succeeded: ${requestedModel} → ${model} (key: ${keyType})`)
         }
 
-        // #region agent log
-        fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H4',location:'lib/ai/gemini.ts:151',message:'Gemini success',data:{model,keyType,fallbackUsed:keyType!=='primary'||usedFallbackModel,textLength:text.length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-
         await logApiCall({
           service: 'gemini',
           endpoint: model,
@@ -174,11 +163,12 @@ async function generateContentWithCandidates({
         }
       } catch (error: any) {
         lastError = error
-        console.error(`Gemini API error [${model}/${keyType}]:`, error.message?.slice(0, 200))
-
-        // #region agent log
-        fetch('http://127.0.0.1:7911/ingest/7eddeae9-2d54-42cf-b0ee-90c4a8dac34b',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8553cd'},body:JSON.stringify({sessionId:'8553cd',runId:'gemini-key-check',hypothesisId:'H3',location:'lib/ai/gemini.ts:170',message:'Gemini error',data:{model,keyType,status:error?.status||null,isApiKeyInvalid:Boolean(error?.message?.includes('API key not valid')),messageSnippet:(error?.message||'').slice(0,200)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
+        const isKeyInvalid = Boolean(error?.message?.includes('API key not valid'))
+        if (isKeyInvalid) {
+          console.error(`Gemini API error [${model}/${keyType}]: API key '${keyType}' is invalid — check GEMINI_API_KEY${keyType === 'primary' ? '' : `_${keyType.toUpperCase()}`} in your environment.`)
+        } else {
+          console.error(`Gemini API error [${model}/${keyType}]:`, error.message?.slice(0, 200))
+        }
 
         await logApiCall({
           service: 'gemini',
