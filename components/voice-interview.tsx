@@ -4,8 +4,13 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { LoadingBar } from '@/components/ui/loading-bar'
-import { Mic, MicOff, Phone, PhoneOff, Loader2, Volume2 } from 'lucide-react'
+import { Mic, MicOff, Phone, PhoneOff, Loader2, Volume2, Clock, CheckCircle2 } from 'lucide-react'
 import type { InterviewDifficulty } from '@/lib/validations'
+import {
+  INTERVIEW_DURATION_MINUTES,
+  INTERVIEW_QUESTION_COUNT,
+  type InterviewReport,
+} from '@/lib/interview/prompts'
 
 interface VoiceInterviewProps {
   applicationId: string
@@ -44,8 +49,15 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   const [audioLevel, setAudioLevel] = useState(0)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string | null>(null)
+  const [questionCount, setQuestionCount] = useState(INTERVIEW_QUESTION_COUNT[difficulty])
+  const [durationRange, setDurationRange] = useState(INTERVIEW_DURATION_MINUTES[difficulty])
+  const [report, setReport] = useState<InterviewReport | null>(null)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
+  const finishingRef = useRef(false)
+  const finishInterviewRef = useRef<() => void>(() => undefined)
   const audioContextRef = useRef<AudioContext | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
@@ -177,6 +189,52 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     }
   }
 
+  async function generateReport(currentTranscript: typeof transcript) {
+    const id = sessionIdRef.current
+    if (!id || currentTranscript.length === 0) {
+      setReportError('Not enough conversation was captured to generate a report.')
+      return
+    }
+    setReportLoading(true)
+    setReportError(null)
+    try {
+      const res = await fetch('/api/interview/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: id,
+          jobTitle: jobRole,
+          company,
+          difficulty,
+          transcript: currentTranscript,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Failed to generate report')
+      }
+      const data = await res.json()
+      setReport(data.report as InterviewReport)
+    } catch (err: unknown) {
+      setReportError(err instanceof Error ? err.message : 'Failed to generate report')
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  function finishInterview() {
+    if (finishingRef.current) return
+    finishingRef.current = true
+    intentionalCloseRef.current = true
+    if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.close()
+    cleanup()
+    setStatus('ended')
+    const current = transcriptRef.current
+    void saveSession('completed', current)
+    void generateReport(current)
+  }
+  finishInterviewRef.current = finishInterview
+
   const handleServerPayload = useCallback((
     data: any,
     ws: WebSocket,
@@ -199,7 +257,7 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
         clientContent: {
           turns: [{
             role: 'user',
-            parts: [{ text: 'Please begin the interview now with your introduction.' }],
+            parts: [{ text: 'Please begin the interview now with a clear opening: introduce yourself, say how long this will take and how many questions there are, then ask me to introduce myself.' }],
           }],
           turnComplete: true,
         },
@@ -360,10 +418,10 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
         }
 
         if (statusRef.current !== 'error' && statusRef.current !== 'ended') {
-          setStatus('ended')
-          void saveSession('completed', transcriptRef.current)
+          finishInterviewRef.current()
+        } else {
+          cleanup()
         }
-        cleanup()
       }
     }).catch(async (err: unknown) => {
       const message = err instanceof Error ? err.message : String(err)
@@ -387,6 +445,9 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     setStatus('connecting')
     setError(null)
     setTranscript([])
+    setReport(null)
+    setReportError(null)
+    finishingRef.current = false
     intentionalCloseRef.current = false
 
     try {
@@ -399,8 +460,13 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
         const err = await res.json()
         throw new Error(err.error || 'Failed to create session')
       }
-      const { apiKey, model, systemInstruction, websocketUrl, sessionId: newSessionId } = await res.json()
+      const data = await res.json()
+      const { apiKey, model, systemInstruction, websocketUrl, sessionId: newSessionId } = data
       setSessionId(newSessionId)
+      if (typeof data.questionCount === 'number') setQuestionCount(data.questionCount)
+      if (data.durationMinutes?.min && data.durationMinutes?.max) {
+        setDurationRange({ min: data.durationMinutes.min, max: data.durationMinutes.max })
+      }
 
       if (!apiKey) throw new Error('Gemini API key was not returned by the server')
 
@@ -440,11 +506,7 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   }, [applicationId, connectWithModel, difficulty])
 
   function endSession() {
-    intentionalCloseRef.current = true
-    if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.close()
-    cleanup()
-    setStatus('ended')
-    void saveSession('completed', transcriptRef.current)
+    finishInterview()
   }
 
   function toggleMute() {
@@ -456,14 +518,16 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   }
 
   const statusConfig: Record<ConnectionStatus, { label: string; color: string }> = {
-    idle: { label: 'Ready', color: 'text-slate-500' },
+    idle: { label: 'Ready to start', color: 'text-slate-500' },
     connecting: { label: 'Connecting...', color: 'text-amber-500' },
-    connected: { label: 'Connected', color: 'text-green-500' },
+    connected: { label: 'Interview started', color: 'text-green-500' },
     speaking: { label: 'Interviewer speaking...', color: 'text-blue-500' },
-    listening: { label: 'Listening to you...', color: 'text-green-500' },
+    listening: { label: 'Your turn — listening...', color: 'text-green-500' },
     error: { label: 'Error', color: 'text-red-500' },
-    ended: { label: 'Interview ended', color: 'text-slate-500' },
+    ended: { label: 'Interview complete', color: 'text-slate-500' },
   }
+
+  const isLive = status === 'connected' || status === 'speaking' || status === 'listening'
 
   return (
     <div className="space-y-4">
@@ -477,10 +541,31 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
           </CardTitle>
           <CardDescription>
             {jobRole} · {difficulty} mode
-            {activeModel ? ` · ${activeModel}` : ''} — speak naturally; the AI gives feedback after each answer
+            {activeModel ? ` · ${activeModel}` : ''} — coaching after answers, with sincere compliments when earned
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-3 text-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              ~{durationRange.min}–{durationRange.max} min
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-muted-foreground">
+              {questionCount} scored questions
+            </span>
+            {isLive && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+                In progress — interviewer will announce remaining questions
+              </span>
+            )}
+            {status === 'ended' && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Session ended
+              </span>
+            )}
+          </div>
+
           {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
           {status === 'connecting' && <LoadingBar active estimatedTime={5} label="Connecting to AI interviewer..." />}
 
@@ -505,14 +590,16 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
           <div className="flex gap-3 justify-center">
             {(status === 'idle' || status === 'error') ? (
               <Button onClick={startSession} className="gap-2 h-12 px-6 rounded-xl">
-                <Phone className="h-5 w-5" /> Start Voice Interview
+                <Phone className="h-5 w-5" /> Start Interview
               </Button>
             ) : status === 'connecting' ? (
               <Button disabled className="gap-2 h-12 px-6 rounded-xl">
                 <Loader2 className="h-5 w-5 animate-spin" /> Connecting...
               </Button>
             ) : status === 'ended' ? (
-              <Button onClick={onComplete} variant="outline" className="gap-2 h-12 px-6 rounded-xl">Done</Button>
+              <Button onClick={onComplete} variant="outline" className="gap-2 h-12 px-6 rounded-xl">
+                Back to setup
+              </Button>
             ) : (
               <>
                 <Button
@@ -529,6 +616,60 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
               </>
             )}
           </div>
+
+          {status === 'ended' && (
+            <div className="space-y-3 rounded-xl border p-4">
+              <h4 className="font-semibold">Interview report</h4>
+              {reportLoading && (
+                <LoadingBar active estimatedTime={12} label="Generating your coaching report from the transcript..." />
+              )}
+              {reportError && (
+                <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{reportError}</div>
+              )}
+              {report && (
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-muted-foreground">{report.summary}</p>
+                    <span className="shrink-0 rounded-lg bg-primary/10 px-3 py-1.5 text-lg font-bold text-primary">
+                      {report.overallScore}/100
+                    </span>
+                  </div>
+                  {report.topicsDiscussed.length > 0 && (
+                    <div>
+                      <p className="mb-1 font-medium">What you talked about</p>
+                      <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                        {report.topicsDiscussed.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {report.strengths.length > 0 && (
+                    <div>
+                      <p className="mb-1 font-medium text-green-700 dark:text-green-400">What went well</p>
+                      <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                        {report.strengths.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {report.gaps.length > 0 && (
+                    <div>
+                      <p className="mb-1 font-medium text-amber-700 dark:text-amber-400">Gaps / holes</p>
+                      <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                        {report.gaps.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {report.improvements.length > 0 && (
+                    <div>
+                      <p className="mb-1 font-medium">How to improve</p>
+                      <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                        {report.improvements.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {transcript.length > 0 && (
             <div className="mt-4">

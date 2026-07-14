@@ -1,12 +1,25 @@
-import { type ResumeOutputLanguage } from '@/lib/validations'
+import { type ResumeOutputLanguage, type InterviewDifficulty } from '@/lib/validations'
 import { type CompanyResearch } from '@/lib/research/company-research'
-import { type InterviewDifficulty } from '@/lib/validations'
 
 const LANGUAGE_NAMES: Record<ResumeOutputLanguage, string> = {
   en: 'English',
   hi: 'Hindi',
   mr: 'Marathi',
   or: 'Odia',
+}
+
+/** Planned scored questions (intro is separate). */
+export const INTERVIEW_QUESTION_COUNT: Record<InterviewDifficulty, number> = {
+  easy: 6,
+  normal: 8,
+  hard: 10,
+}
+
+/** Rough wall-clock estimate shown to the user. */
+export const INTERVIEW_DURATION_MINUTES: Record<InterviewDifficulty, { min: number; max: number }> = {
+  easy: { min: 10, max: 15 },
+  normal: { min: 15, max: 20 },
+  hard: { min: 20, max: 25 },
 }
 
 const DIFFICULTY_INSTRUCTIONS: Record<InterviewDifficulty, string> = {
@@ -25,7 +38,8 @@ const DIFFICULTY_INSTRUCTIONS: Record<InterviewDifficulty, string> = {
 - Probe deeply into every claim — ask "why", "how", "what would you do differently".
 - Challenge inconsistencies and push back on weak answers.
 - Ask uncomfortable follow-up questions. Make the candidate defend their experience.
-- Do NOT be rude, but be demanding and intellectually tough.`,
+- Do NOT be rude, but be demanding and intellectually tough.
+- Still be fair: acknowledge strong points when they earn it.`,
 }
 
 interface BuildPromptParams {
@@ -50,6 +64,8 @@ export function buildInterviewSystemInstruction(params: BuildPromptParams): stri
   } = params
 
   const languageName = LANGUAGE_NAMES[language]
+  const questionCount = INTERVIEW_QUESTION_COUNT[difficulty]
+  const duration = INTERVIEW_DURATION_MINUTES[difficulty]
   const researchBlock = companyResearch
     ? `
 COMPANY RESEARCH:
@@ -59,7 +75,7 @@ COMPANY RESEARCH:
 - Interview tips: ${companyResearch.interviewTips?.join('; ') || 'N/A'}`
     : ''
 
-  return `You are an expert hiring manager conducting a REAL job interview for the ${jobTitle} position at ${company}.
+  return `You are an expert hiring manager conducting a REAL practice job interview for the ${jobTitle} position at ${company}.
 
 LANGUAGE: Conduct the ENTIRE interview in ${languageName}. Speak naturally using the appropriate script for ${languageName}.
 
@@ -72,37 +88,94 @@ JOB DESCRIPTION:
 ${jobDescription.slice(0, 3000)}
 ${researchBlock}
 
+TIMING & LENGTH (critical):
+- This interview has exactly ${questionCount} scored questions after the introduction.
+- Expected length: about ${duration.min}-${duration.max} minutes.
+- Track question number mentally (1 through ${questionCount}).
+- After each scored question cycle, tell the candidate how many questions remain (e.g. "That was question 3 of ${questionCount}. We have ${questionCount - 3} left."). On the last question, say it is the final question.
+
 INTERVIEW STRUCTURE — follow this flow strictly:
 
-1. OPENING (first turn only):
-   - Introduce yourself as the interviewer (use a realistic name).
-   - Briefly mention the company and role.
-   - Set a professional tone and ask the candidate to introduce themselves.
+1. CLEAR OPENING (first turn only):
+   - Introduce yourself with a realistic name and your role (hiring manager / interviewer for ${company}).
+   - Welcome the candidate and state the role clearly.
+   - Explicitly say: this practice interview will take about ${duration.min}-${duration.max} minutes and include ${questionCount} questions, plus brief coaching after each answer.
+   - Say you are ready to begin, then ask the candidate to introduce themselves briefly.
+   - Do NOT give coaching on the intro itself beyond a short warm acknowledgment.
 
-2. MAIN INTERVIEW (ongoing):
+2. MAIN INTERVIEW (${questionCount} scored questions):
    - Ask contextual questions based on the resume, job description, and what the candidate JUST said.
    - NEVER repeat the same question. Each question must build on prior answers.
-   - Mix behavioral (STAR), role-specific technical, and situational questions.
+   - Mix behavioral (STAR), role-specific, and situational questions.
    - Adapt difficulty to the ${difficulty} setting.
+   - One question per turn (after feedback).
 
-3. AFTER EVERY CANDIDATE RESPONSE — this is critical:
-   - First, give 20-40 seconds of constructive feedback on their answer (what was good, what to improve for next time).
-   - Then immediately ask the next interview question.
-   - Alternate: feedback → question → listen → feedback → question.
+3. AFTER EVERY CANDIDATE ANSWER TO A SCORED QUESTION:
+   - Respond with a short coaching beat (about 20–40 seconds of speaking), then ask the next question (or close if finished).
+   - Balance: give constructive improvement tips AND, when something was genuinely strong, include a sincere compliment (clarity, ownership, impact, structure, domain knowledge, etc.).
+   - Do NOT compliment every single answer — that feels fake. Roughly compliment about half or fewer of the answers, only when earned. On weaker answers, stay kind but focus on one concrete improvement.
+   - Never sound dystopian, cold, or relentlessly critical. You are a supportive coach who also interviews honestly.
+   - Always end the coaching beat by stating the remaining question count, then ask the next question (unless this was the last one).
 
-4. CLOSING (after 8-12 question cycles OR when candidate says they are done):
-   - Thank the candidate.
-   - Give a brief overall assessment (2-3 sentences).
-   - Explain next steps as a real interviewer would.
-   - End the interview clearly.
+4. CLEAR CLOSING (after question ${questionCount}, or if the candidate asks to stop):
+   - Explicitly say the interview is now complete / over.
+   - Thank the candidate by name if you have it.
+   - Give a brief overall impression (2–3 sentences): strengths + one growth area.
+   - Wish them well and say a clear goodbye phrase so they know the conversation has ended (e.g. "That concludes our interview today. Goodbye for now.").
+   - After the goodbye, do not ask another question.
 
 RULES:
 - Stay in character as a real interviewer throughout.
-- Do NOT break character or mention being an AI.
-- Do NOT ask all questions at once — one question per turn after feedback.
+- Do NOT break character or mention being an AI, unless the candidate forces the topic.
+- Do NOT ask all questions at once.
 - Reference specific details from their resume when relevant.
-- If the candidate gives a short answer, ask a follow-up before moving on (unless EASY mode).
+- If the candidate gives a very short answer, ask one brief follow-up before counting that question as complete (unless EASY mode).
 - Speak concisely — this is voice, not an essay.`
 }
 
 export const GEMINI_LIVE_WEBSOCKET_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
+
+export interface InterviewReport {
+  summary: string
+  topicsDiscussed: string[]
+  strengths: string[]
+  gaps: string[]
+  improvements: string[]
+  overallScore: number
+}
+
+export function buildInterviewReportPrompt(input: {
+  jobTitle: string
+  company: string
+  difficulty: string
+  transcript: Array<{ role: string; text: string }>
+}): string {
+  const transcriptText = input.transcript
+    .map((entry) => `${entry.role === 'model' ? 'Interviewer' : 'Candidate'}: ${entry.text}`)
+    .join('\n\n')
+
+  return `You are an expert interview coach. Analyze this practice interview transcript and produce a clear, actionable report.
+
+ROLE: ${input.jobTitle}
+COMPANY: ${input.company}
+DIFFICULTY: ${input.difficulty}
+
+TRANSCRIPT:
+${transcriptText.slice(0, 14000)}
+
+Return ONLY valid JSON with this shape:
+{
+  "summary": "2-4 sentence overview of how the interview went",
+  "topicsDiscussed": ["topic1", "topic2"],
+  "strengths": ["what the candidate did well"],
+  "gaps": ["holes, missing depth, weak areas, unanswered themes"],
+  "improvements": ["specific actionable advice for next time"],
+  "overallScore": 78
+}
+
+Rules:
+- overallScore is 0-100.
+- Be fair and constructive — recognize real strengths, not only problems.
+- If the transcript is too short, say so in summary and still give useful prep advice.
+- No markdown, JSON only.`
+}

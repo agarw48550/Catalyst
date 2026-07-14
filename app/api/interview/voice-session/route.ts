@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { config } from '@/config'
 import { createSupabaseServerClient, requireClerkUserId } from '@/lib/supabase-clerk'
 import { interviewSessionSchema } from '@/lib/validations'
-import { buildInterviewSystemInstruction, GEMINI_LIVE_WEBSOCKET_URL } from '@/lib/interview/prompts'
+import { buildInterviewSystemInstruction, GEMINI_LIVE_WEBSOCKET_URL, INTERVIEW_DURATION_MINUTES, INTERVIEW_QUESTION_COUNT } from '@/lib/interview/prompts'
 import type { CompanyResearch } from '@/lib/research/company-research'
 import type { ResumeOutputLanguage } from '@/lib/validations'
 
@@ -74,6 +74,8 @@ export async function POST(request: Request) {
       model: config.gemini.liveModel,
       systemInstruction,
       websocketUrl: GEMINI_LIVE_WEBSOCKET_URL,
+      questionCount: INTERVIEW_QUESTION_COUNT[difficulty],
+      durationMinutes: INTERVIEW_DURATION_MINUTES[difficulty],
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create voice session'
