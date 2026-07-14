@@ -137,8 +137,8 @@ export const config = {
   },
 } as const
 
-# Real Google AI Studio keys traditionally start with "AIzaSy" (39 chars).
-# Newer AI Studio / Gemini keys may use other prefixes — only warn on clearly placeholder values.
+// Real Google AI Studio keys traditionally start with "AIzaSy" (39 chars).
+// Newer AI Studio / Gemini keys may use other prefixes — only warn on clearly placeholder values.
 const GEMINI_KEY_PLACEHOLDER = /^(your-|xxx|sk-test)/i
 
 function warnIfMalformedGeminiKey(name: string, value: string) {
