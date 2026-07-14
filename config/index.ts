@@ -26,9 +26,15 @@ export const config = {
     apiKeyTertiary: process.env.GEMINI_API_KEY_TERTIARY || '',
     defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemma-4-31b-it',
     flashModel: process.env.GEMINI_FLASH_MODEL || 'gemma-4-31b-it',
+    liveModel: process.env.GEMINI_LIVE_MODEL || 'gemini-3-flash-live',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     // Fallback order for API keys
     fallbackOrder: ['primary', 'secondary', 'tertiary'] as const,
+  },
+
+  // Web search
+  search: {
+    tavilyApiKey: process.env.TAVILY_API_KEY || '',
   },
 
   // Email services

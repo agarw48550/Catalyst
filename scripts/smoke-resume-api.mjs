@@ -62,7 +62,7 @@ async function smokeTailor() {
   const payload = JSON.parse(raw)
   assert(response.ok, `Resume tailor failed: ${JSON.stringify(payload)}`)
   assert(typeof payload.tailoredResume === 'string' && payload.tailoredResume.length > 0, 'Tailor response missing tailoredResume')
-  assert(['gemma-4-31b-it', 'gemma-4-26b-a4b-it'].includes(response.headers.get('x-ai-model') || ''), 'Tailor response did not use an approved Gemma model')
+  assert(['gemma-4-31b-it', 'gemma-4-26b-a4b-it', 'gemini-3.1-flash-lite'].includes(response.headers.get('x-ai-model') || ''), 'Tailor response did not use an approved text model')
 
   console.log('Tailor smoke passed with model:', response.headers.get('x-ai-model'))
 }
@@ -87,7 +87,7 @@ async function smokePdfParse() {
   const payload = JSON.parse(raw)
   assert(response.ok, `Resume PDF parse failed: ${JSON.stringify(payload)}`)
   assert(typeof payload.text === 'string' && payload.text.trim().length > 0, 'PDF parse response missing extracted text')
-  assert(['gemma-4-31b-it', 'gemma-4-26b-a4b-it'].includes(response.headers.get('x-ai-model') || ''), 'PDF parse response did not use an approved Gemma model')
+  assert(['gemma-4-31b-it', 'gemma-4-26b-a4b-it', 'gemini-3.1-flash-lite'].includes(response.headers.get('x-ai-model') || ''), 'PDF parse response did not use an approved text model')
 
   console.log('PDF smoke passed with model:', response.headers.get('x-ai-model'))
 }

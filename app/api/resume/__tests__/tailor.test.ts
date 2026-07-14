@@ -6,7 +6,7 @@ const { mockGenerateGeminiOnly } = vi.hoisted(() => ({
 
 vi.mock('@/lib/ai/gemini', () => ({
   generateGeminiOnly: mockGenerateGeminiOnly,
-  RESUME_MODEL_CANDIDATES: ['gemma-4-31b-it', 'gemma-4-26b-a4b-it'],
+  RESUME_MODEL_CANDIDATES: ['gemma-4-31b-it', 'gemma-4-26b-a4b-it', 'gemini-3.1-flash-lite'],
 }))
 
 import { POST } from '../tailor/route'

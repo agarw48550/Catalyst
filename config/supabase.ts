@@ -61,6 +61,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       resumes: {
         Row: {
@@ -90,6 +91,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       interview_sessions: {
         Row: {
@@ -99,6 +101,8 @@ export type Database = {
           status: string
           transcript: any
           feedback: any | null
+          job_application_id: string | null
+          difficulty: string | null
           created_at: string
           completed_at: string | null
         }
@@ -109,6 +113,8 @@ export type Database = {
           status?: string
           transcript?: any
           feedback?: any | null
+          job_application_id?: string | null
+          difficulty?: string | null
           created_at?: string
           completed_at?: string | null
         }
@@ -119,9 +125,54 @@ export type Database = {
           status?: string
           transcript?: any
           feedback?: any | null
+          job_application_id?: string | null
+          difficulty?: string | null
           created_at?: string
           completed_at?: string | null
         }
+        Relationships: []
+      }
+      job_applications: {
+        Row: {
+          id: string
+          user_id: string
+          job_title: string
+          company: string
+          job_description: string
+          resume_text: string
+          language: string
+          company_research: any
+          research_status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          job_title: string
+          company: string
+          job_description: string
+          resume_text: string
+          language?: string
+          company_research?: any
+          research_status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          job_title?: string
+          company?: string
+          job_description?: string
+          resume_text?: string
+          language?: string
+          company_research?: any
+          research_status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       saved_jobs: {
         Row: {
@@ -148,7 +199,20 @@ export type Database = {
           job_data?: any
           created_at?: string
         }
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }

@@ -33,7 +33,35 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid input' }, { status: 400 })
     }
-    const { resumeText, jobTitle, company, jobDescription, resumeLanguage } = parsed.data
+    const { resumeText, jobTitle, company, jobDescription, resumeLanguage, applicationId } = parsed.data
+
+    let resolvedJobTitle = jobTitle
+    let resolvedCompany = company
+    let resolvedJobDescription = jobDescription || ''
+
+    if (applicationId) {
+      const { createSupabaseServerClient, requireClerkUserId } = await import('@/lib/supabase-clerk')
+      await requireClerkUserId()
+      const supabase = await createSupabaseServerClient()
+      const { data: app, error: appError } = await supabase
+        .from('job_applications')
+        .select('job_title, company, job_description')
+        .eq('id', applicationId)
+        .single()
+
+      if (appError || !app) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+      }
+
+      resolvedJobTitle = app.job_title
+      resolvedCompany = app.company
+      resolvedJobDescription = app.job_description
+    }
+
+    if (!resolvedJobDescription) {
+      return NextResponse.json({ error: 'Job description is required' }, { status: 400 })
+    }
+
     const languageName = LANGUAGE_NAMES[resumeLanguage]
 
     const prompt = `You are an expert resume tailor and ATS optimization specialist for the Indian job market.
@@ -47,10 +75,10 @@ If both look like real resume/job-description content, tailor the resume to bett
 RESUME:
 ${resumeText}
 
-JOB TITLE: ${jobTitle || 'Not specified'}
-COMPANY: ${company || 'Not specified'}
+JOB TITLE: ${resolvedJobTitle || 'Not specified'}
+COMPANY: ${resolvedCompany || 'Not specified'}
 JOB DESCRIPTION:
-${jobDescription}
+${resolvedJobDescription}
 
 Write the "tailoredResume", "summary", and "suggestions" fields in ${languageName}. Keep "matchedSkills" and "missingSkills" as literal skill/keyword terms (do not translate technical terms, tool names, or proper nouns).
 

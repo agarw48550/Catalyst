@@ -5,32 +5,37 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { LoadingBar } from '@/components/ui/loading-bar'
 import { Mic, MicOff, Phone, PhoneOff, Loader2, Volume2 } from 'lucide-react'
+import type { InterviewDifficulty } from '@/lib/validations'
 
 interface VoiceInterviewProps {
+  applicationId: string
   jobRole: string
-  interviewType: string
+  company: string
+  difficulty: InterviewDifficulty
   onComplete: () => void
 }
 
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'speaking' | 'listening' | 'error' | 'ended'
 
-export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInterviewProps) {
+export function VoiceInterview({ applicationId, jobRole, company, difficulty, onComplete }: VoiceInterviewProps) {
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<{ role: 'user' | 'model'; text: string }[]>([])
   const [isMuted, setIsMuted] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
-  const workletNodeRef = useRef<AudioWorkletNode | null>(null)
   const audioQueueRef = useRef<ArrayBuffer[]>([])
   const isPlayingRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
   const statusRef = useRef<ConnectionStatus>('idle')
+  const transcriptRef = useRef(transcript)
 
   useEffect(() => { statusRef.current = status }, [status])
+  useEffect(() => { transcriptRef.current = transcript }, [transcript])
   useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [transcript])
 
   const playAudioQueue = useCallback(async () => {
@@ -47,9 +52,13 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
         const buf = ctx.createBuffer(1, float32.length, 24000)
         buf.getChannelData(0).set(float32)
         const src = ctx.createBufferSource()
-        src.buffer = buf; src.connect(ctx.destination); src.start()
-        await new Promise<void>(r => { src.onended = () => r() })
-      } catch {}
+        src.buffer = buf
+        src.connect(ctx.destination)
+        src.start()
+        await new Promise<void>((r) => { src.onended = () => r() })
+      } catch {
+        // skip bad audio chunk
+      }
     }
     isPlayingRef.current = false
   }, [])
@@ -60,7 +69,6 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
     analyser.fftSize = 2048
     source.connect(analyser)
 
-    // Use ScriptProcessorNode as fallback (AudioWorklet needs served files)
     const processor = audioContext.createScriptProcessor(4096, 1, 1)
     const dataArray = new Uint8Array(analyser.frequencyBinCount)
 
@@ -91,15 +99,49 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
     setStatus('listening')
   }, [isMuted])
 
+  function cleanup() {
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop())
+    mediaStreamRef.current = null
+    audioContextRef.current?.close()
+    audioContextRef.current = null
+    audioQueueRef.current = []
+    isPlayingRef.current = false
+  }
+
+  async function saveSession(status: 'completed' | 'cancelled', currentTranscript: typeof transcript) {
+    if (!sessionId) return
+    try {
+      await fetch('/api/interview/session', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          transcript: currentTranscript,
+          status,
+        }),
+      })
+    } catch {
+      // non-blocking
+    }
+  }
+
   const startSession = useCallback(async () => {
-    setStatus('connecting'); setError(null); setTranscript([])
+    setStatus('connecting')
+    setError(null)
+    setTranscript([])
+
     try {
       const res = await fetch('/api/interview/voice-session', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobRole, interviewType }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId, difficulty }),
       })
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to create session') }
-      const { apiKey, model, systemInstruction, websocketUrl } = await res.json()
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to create session')
+      }
+      const { apiKey, model, systemInstruction, websocketUrl, sessionId: newSessionId } = await res.json()
+      setSessionId(newSessionId)
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
@@ -109,13 +151,13 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
       const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
 
-      const ws = new WebSocket(websocketUrl + '?key=' + apiKey)
+      const ws = new WebSocket(`${websocketUrl}?key=${apiKey}`)
       wsRef.current = ws
 
       ws.onopen = () => {
         ws.send(JSON.stringify({
           setup: {
-            model: 'models/' + model,
+            model: `models/${model}`,
             generationConfig: {
               responseModalities: ['AUDIO', 'TEXT'],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
@@ -128,15 +170,25 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          if (data.setupComplete) { setStatus('connected'); startAudioCapture(ws, audioContext, stream); return }
-          if (data.error) { setError('AI error: ' + (data.error.message || JSON.stringify(data.error))); setStatus('error'); return }
+          if (data.setupComplete) {
+            setStatus('connected')
+            startAudioCapture(ws, audioContext, stream)
+            return
+          }
+          if (data.error) {
+            setError(`AI error: ${data.error.message || JSON.stringify(data.error)}`)
+            setStatus('error')
+            return
+          }
           if (data.serverContent) {
             const parts = data.serverContent.modelTurn?.parts || []
             for (const part of parts) {
               if (part.text) {
-                setTranscript(prev => {
+                setTranscript((prev) => {
                   const last = prev[prev.length - 1]
-                  if (last && last.role === 'model') return [...prev.slice(0, -1), { role: 'model', text: last.text + part.text }]
+                  if (last && last.role === 'model') {
+                    return [...prev.slice(0, -1), { role: 'model', text: last.text + part.text }]
+                  }
                   return [...prev, { role: 'model', text: part.text }]
                 })
               }
@@ -152,38 +204,36 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
             }
             if (data.serverContent.turnComplete) setStatus('listening')
           }
-        } catch {}
+        } catch {
+          // ignore malformed messages
+        }
       }
 
-      ws.onerror = () => { setError('Connection error. Please check your internet.'); setStatus('error') }
-      ws.onclose = (e) => {
+      ws.onerror = () => {
+        setError('Connection error. Please check your internet.')
+        setStatus('error')
+      }
+      ws.onclose = () => {
         if (statusRef.current !== 'error' && statusRef.current !== 'ended') setStatus('ended')
         cleanup()
       }
-    } catch (err: any) { setError(err.message || 'Failed to start'); setStatus('error'); cleanup() }
-  }, [interviewType, jobRole, playAudioQueue, startAudioCapture])
-
-  function cleanup() {
-    workletNodeRef.current?.disconnect()
-    workletNodeRef.current = null
-    mediaStreamRef.current?.getTracks().forEach(t => t.stop())
-    mediaStreamRef.current = null
-    audioContextRef.current?.close()
-    audioContextRef.current = null
-    audioQueueRef.current = []
-    isPlayingRef.current = false
-  }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to start')
+      setStatus('error')
+      cleanup()
+    }
+  }, [applicationId, difficulty, playAudioQueue, startAudioCapture])
 
   function endSession() {
     if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.close()
-    cleanup(); setStatus('ended')
-    const c = parseInt(localStorage.getItem('catalyst_interview_count') || '0', 10)
-    localStorage.setItem('catalyst_interview_count', (c + 1).toString())
+    cleanup()
+    setStatus('ended')
+    void saveSession('completed', transcriptRef.current)
   }
 
   function toggleMute() {
     setIsMuted(!isMuted)
-    mediaStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = isMuted })
+    mediaStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = isMuted })
   }
 
   const statusConfig: Record<ConnectionStatus, { label: string; color: string }> = {
@@ -201,23 +251,32 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
       <Card className="dark:bg-slate-900/50">
         <CardHeader>
           <CardTitle className="flex items-center justify-between dark:text-white">
-            <span>Voice Interview</span>
-            <span className={'text-sm font-normal ' + statusConfig[status].color}>{'\u25CF'} {statusConfig[status].label}</span>
+            <span>Live Interview — {company}</span>
+            <span className={`text-sm font-normal ${statusConfig[status].color}`}>
+              {'\u25CF'} {statusConfig[status].label}
+            </span>
           </CardTitle>
-          <CardDescription>Speak naturally - the AI interviewer will ask questions and give feedback</CardDescription>
+          <CardDescription>
+            {jobRole} · {difficulty} mode — speak naturally; the AI gives feedback after each answer
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-          {status === 'connecting' && <LoadingBar active={true} estimatedTime={5} label="Connecting to AI interviewer..." />}
+          {status === 'connecting' && <LoadingBar active estimatedTime={5} label="Connecting to AI interviewer..." />}
 
           {(status === 'listening' || status === 'speaking') && (
             <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800">
               <div className="relative">
-                {status === 'listening' ? <Mic className="h-8 w-8 text-green-500" /> : <Volume2 className="h-8 w-8 text-blue-500 animate-pulse" />}
+                {status === 'listening'
+                  ? <Mic className="h-8 w-8 text-green-500" />
+                  : <Volume2 className="h-8 w-8 text-blue-500 animate-pulse" />}
               </div>
               <div className="flex-1">
                 <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                  <div className={'h-full rounded-full transition-all duration-100 ' + (status === 'listening' ? 'bg-green-500' : 'bg-blue-500')} style={{ width: Math.min(100, status === 'listening' ? audioLevel * 3 : 50 + Math.sin(Date.now() / 200) * 30) + '%' }} />
+                  <div
+                    className={`h-full rounded-full transition-all duration-100 ${status === 'listening' ? 'bg-green-500' : 'bg-blue-500'}`}
+                    style={{ width: `${Math.min(100, status === 'listening' ? audioLevel * 3 : 50)}%` }}
+                  />
                 </div>
               </div>
             </div>
@@ -225,17 +284,28 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
 
           <div className="flex gap-3 justify-center">
             {(status === 'idle' || status === 'error') ? (
-              <Button onClick={startSession} className="gap-2 h-12 px-6 rounded-xl"><Phone className="h-5 w-5" /> Start Voice Interview</Button>
+              <Button onClick={startSession} className="gap-2 h-12 px-6 rounded-xl">
+                <Phone className="h-5 w-5" /> Start Voice Interview
+              </Button>
             ) : status === 'connecting' ? (
-              <Button disabled className="gap-2 h-12 px-6 rounded-xl"><Loader2 className="h-5 w-5 animate-spin" /> Connecting...</Button>
+              <Button disabled className="gap-2 h-12 px-6 rounded-xl">
+                <Loader2 className="h-5 w-5 animate-spin" /> Connecting...
+              </Button>
             ) : status === 'ended' ? (
               <Button onClick={onComplete} variant="outline" className="gap-2 h-12 px-6 rounded-xl">Done</Button>
             ) : (
               <>
-                <Button onClick={toggleMute} variant="outline" className={'gap-2 h-12 px-6 rounded-xl ' + (isMuted ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400' : '')}>
-                  {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />} {isMuted ? 'Unmute' : 'Mute'}
+                <Button
+                  onClick={toggleMute}
+                  variant="outline"
+                  className={`gap-2 h-12 px-6 rounded-xl ${isMuted ? 'bg-red-50 border-red-200 text-red-600' : ''}`}
+                >
+                  {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  {isMuted ? 'Unmute' : 'Mute'}
                 </Button>
-                <Button onClick={endSession} variant="destructive" className="gap-2 h-12 px-6 rounded-xl"><PhoneOff className="h-5 w-5" /> End Interview</Button>
+                <Button onClick={endSession} variant="destructive" className="gap-2 h-12 px-6 rounded-xl">
+                  <PhoneOff className="h-5 w-5" /> End Interview
+                </Button>
               </>
             )}
           </div>
@@ -245,8 +315,15 @@ export function VoiceInterview({ jobRole, interviewType, onComplete }: VoiceInte
               <h4 className="text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Live Transcript</h4>
               <div className="space-y-2 max-h-64 overflow-y-auto p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                 {transcript.map((entry, i) => (
-                  <div key={i} className={'text-sm p-2 rounded-lg ' + (entry.role === 'model' ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200' : 'bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-200 ml-8')}>
-                    <span className="font-semibold text-xs uppercase tracking-wider opacity-60">{entry.role === 'model' ? 'Interviewer' : 'You'}</span>
+                  <div
+                    key={i}
+                    className={`text-sm p-2 rounded-lg ${entry.role === 'model'
+                      ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200'
+                      : 'bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-200 ml-8'}`}
+                  >
+                    <span className="font-semibold text-xs uppercase tracking-wider opacity-60">
+                      {entry.role === 'model' ? 'Interviewer' : 'You'}
+                    </span>
                     <p className="mt-0.5">{entry.text}</p>
                   </div>
                 ))}

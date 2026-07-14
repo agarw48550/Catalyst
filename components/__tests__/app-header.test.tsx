@@ -32,11 +32,11 @@ vi.mock('@/components/theme-toggle', () => ({
 import { AppHeader } from '../app-header'
 
 describe('AppHeader', () => {
-  it('renders only dashboard and resume links in the main navigation', () => {
+  it('renders only dashboard link in the main navigation', () => {
     render(<AppHeader />)
 
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard')
-    expect(screen.getByRole('link', { name: /resume/i })).toHaveAttribute('href', '/resume')
+    expect(screen.queryByRole('link', { name: /resume/i })).not.toBeInTheDocument()
   })
 
   it('does not render removed feature links', () => {

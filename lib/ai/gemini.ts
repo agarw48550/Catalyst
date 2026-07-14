@@ -28,6 +28,7 @@ export type GeminiModel =
   | 'gemini-2.5-pro'
   | 'gemini-2.0-flash'
   | 'gemini-2.0-flash-lite'
+  | 'gemini-3.1-flash-lite'
   | 'gemma-4-31b-it'
   | 'gemma-4-26b-a4b-it'
   | 'text-embedding-004'
@@ -72,17 +73,20 @@ interface GeminiContentsRequest {
 export const RESUME_MODEL_CANDIDATES = [
   'gemma-4-31b-it',
   'gemma-4-26b-a4b-it',
+  'gemini-3.1-flash-lite',
 ] as const satisfies readonly GeminiModel[]
 
 /**
- * Model fallback map: when a model hits 429, try these alternatives
+ * Model fallback map: when a model fails, try these alternatives
+ * Text models: Gemma 31B → Gemma 26B → Gemini 3.1 Flash Lite
  */
 const MODEL_FALLBACKS: Record<string, GeminiModel[]> = {
-  'gemma-4-31b-it': ['gemma-4-26b-a4b-it', 'gemini-2.5-pro', 'gemini-2.5-flash'],
-  'gemma-4-26b-a4b-it': ['gemma-4-31b-it', 'gemini-2.5-pro', 'gemini-2.5-flash'],
-  'gemini-2.5-pro': ['gemma-4-31b-it', 'gemini-2.5-flash', 'gemini-2.0-flash'],
-  'gemini-2.5-flash': ['gemma-4-31b-it', 'gemini-2.0-flash'],
-  'gemini-2.0-flash': ['gemma-4-31b-it', 'gemini-2.5-flash'],
+  'gemma-4-31b-it': ['gemma-4-26b-a4b-it', 'gemini-3.1-flash-lite'],
+  'gemma-4-26b-a4b-it': ['gemini-3.1-flash-lite', 'gemma-4-31b-it'],
+  'gemini-3.1-flash-lite': ['gemma-4-26b-a4b-it', 'gemma-4-31b-it'],
+  'gemini-2.5-pro': ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+  'gemini-2.5-flash': ['gemini-3.1-flash-lite', 'gemini-2.0-flash'],
+  'gemini-2.0-flash': ['gemini-3.1-flash-lite', 'gemini-2.5-flash'],
 }
 
 function is429Error(error: any): boolean {
@@ -180,12 +184,15 @@ async function generateContentWithCandidates({
           fallbackUsed: keyType !== 'primary' || model !== requestedModel,
         })
 
-        if (is429Error(error)) {
-          console.log(`⚠ Rate limited on ${model}, trying fallback model...`)
-          break
+        // Invalid keys: try next key for the same model.
+        // Rate limits / model errors: switch to the next candidate model.
+        if (isKeyInvalid) {
+          console.log(`Trying next API key for ${model}...`)
+          continue
         }
 
-        console.log(`Trying next API key for ${model}...`)
+        console.log(`⚠ ${model} failed (${is429Error(error) ? 'rate limited' : 'error'}) — switching to next model...`)
+        break
       }
     }
   }

@@ -23,10 +23,43 @@ export const resumeTailorSchema = z.object({
     resumeText: safeString(RESUME_INPUT_MAX_CHARS),
     jobTitle: z.string().max(200).optional().default(''),
     company: z.string().max(200).optional().default(''),
-    jobDescription: safeString(RESUME_INPUT_MAX_CHARS),
+    jobDescription: safeString(RESUME_INPUT_MAX_CHARS).optional(),
     resumeLanguage: resumeOutputLanguageSchema.optional().default('en'),
+    applicationId: z.string().uuid().optional(),
 })
 export type ResumeTailorInput = z.infer<typeof resumeTailorSchema>
+
+// ── Job Applications ────────────────────────────────────────────────
+export const jobApplicationLanguageSchema = resumeOutputLanguageSchema
+export type JobApplicationLanguage = ResumeOutputLanguage
+
+export const jobApplicationCreateSchema = z.object({
+    jobTitle: safeString(200),
+    company: safeString(200),
+    jobDescription: safeString(RESUME_INPUT_MAX_CHARS),
+    resumeText: safeString(RESUME_INPUT_MAX_CHARS),
+    language: jobApplicationLanguageSchema.optional().default('en'),
+})
+export type JobApplicationCreateInput = z.infer<typeof jobApplicationCreateSchema>
+
+export const interviewDifficultySchema = z.enum(['easy', 'normal', 'hard'])
+export type InterviewDifficulty = z.infer<typeof interviewDifficultySchema>
+
+export const interviewSessionSchema = z.object({
+    applicationId: z.string().uuid(),
+    difficulty: interviewDifficultySchema.optional().default('normal'),
+})
+export type InterviewSessionInput = z.infer<typeof interviewSessionSchema>
+
+export const interviewSessionUpdateSchema = z.object({
+    sessionId: z.string().uuid(),
+    transcript: z.array(z.object({
+        role: z.enum(['user', 'model']),
+        text: z.string(),
+    })).optional(),
+    status: z.enum(['in_progress', 'completed', 'cancelled']).optional(),
+})
+export type InterviewSessionUpdateInput = z.infer<typeof interviewSessionUpdateSchema>
 
 // ── Interview Start ─────────────────────────────────────────────────
 export const interviewStartSchema = z.object({

@@ -47,12 +47,12 @@ export default function HomePage() {
             <ThemeToggle />
             <LanguageToggle />
             <div className="hidden items-center gap-2 sm:flex">
-              <SignInButton mode="modal">
+              <SignInButton mode="modal" forceRedirectUrl="/dashboard">
                 <Button variant="ghost" className="font-semibold text-muted-foreground hover:text-primary">
                   {t('nav.login')}
                 </Button>
               </SignInButton>
-              <SignUpButton mode="modal">
+              <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
                 <Button className="font-bold shadow-lg shadow-primary/20">
                   {t('nav.getStarted')}
                 </Button>

@@ -1,0 +1,15 @@
+# Linked to Catalyst project
+project_id = "bfojxgugroptuxnlpogc"
+
+[api]
+enabled = true
+
+[db]
+port = 54322
+
+[auth]
+enabled = true
+
+[auth.third_party.clerk]
+enabled = true
+domain = "ace-deer-85.clerk.accounts.dev"

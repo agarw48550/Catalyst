@@ -2,14 +2,13 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Briefcase, FileText, LayoutDashboard } from 'lucide-react'
+import { Briefcase, LayoutDashboard } from 'lucide-react'
 import { SignInButton, SignUpButton, Show, UserButton } from '@clerk/nextjs'
 import { useLanguage, LanguageToggle } from '@/lib/i18n/context'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 const navItems = [
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-    { href: '/resume', labelKey: 'nav.resume', icon: FileText },
 ] as const
 
 export function AppHeader() {
@@ -47,10 +46,10 @@ export function AppHeader() {
                     <div className="h-6 w-[1px] bg-border mx-1 hidden sm:block"></div>
                     <Show when="signed-out">
                         <div className="flex gap-2">
-                            <SignInButton mode="modal">
+                            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
                                 <Button variant="ghost" size="sm">{t('nav.login')}</Button>
                             </SignInButton>
-                            <SignUpButton mode="modal">
+                            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
                                 <Button size="sm">{t('nav.signup')}</Button>
                             </SignUpButton>
                         </div>
