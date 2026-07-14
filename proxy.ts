@@ -4,6 +4,8 @@ const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/applications(.*)',
   '/resume(.*)',
+  '/api/applications(.*)',
+  '/api/interview(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {
@@ -12,8 +14,9 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    '/dashboard(.*)',
-    '/applications(.*)',
-    '/resume(.*)',
+    // Skip Next.js internals and static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes (required so auth() works in route handlers)
+    '/(api|trpc)(.*)',
   ],
 }
