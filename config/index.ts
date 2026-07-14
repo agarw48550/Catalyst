@@ -38,7 +38,7 @@ export const config = {
     apiKeyTertiary: process.env.GEMINI_API_KEY_TERTIARY || '',
     defaultModel: process.env.GEMINI_DEFAULT_MODEL || 'gemma-4-31b-it',
     flashModel: process.env.GEMINI_FLASH_MODEL || 'gemma-4-31b-it',
-    liveModel: process.env.GEMINI_LIVE_MODEL || 'gemini-3-flash-live',
+    liveModel: process.env.GEMINI_LIVE_MODEL || 'gemini-3.1-flash-live-preview',
     embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
     // Fallback order for API keys
     fallbackOrder: ['primary', 'secondary', 'tertiary'] as const,
@@ -137,13 +137,15 @@ export const config = {
   },
 } as const
 
-// Real Google API keys are always 39 chars, starting with "AIzaSy"
-const GEMINI_KEY_SHAPE = /^AIzaSy[\w-]{33}$/
+# Real Google AI Studio keys traditionally start with "AIzaSy" (39 chars).
+# Newer AI Studio / Gemini keys may use other prefixes — only warn on clearly placeholder values.
+const GEMINI_KEY_PLACEHOLDER = /^(your-|xxx|sk-test)/i
 
 function warnIfMalformedGeminiKey(name: string, value: string) {
-  if (value && !GEMINI_KEY_SHAPE.test(value)) {
+  if (!value) return
+  if (GEMINI_KEY_PLACEHOLDER.test(value) || value.length < 20) {
     console.warn(
-      `⚠️  ${name} looks malformed (length ${value.length}, expected 39 chars starting with "AIzaSy"). Gemini will reject it with a 400 "API key not valid" error.`
+      `⚠️  ${name} looks like a placeholder or too short (length ${value.length}). Gemini requests will fail until you set a real Google AI Studio API key.`
     )
   }
 }

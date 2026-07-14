@@ -17,6 +17,25 @@ interface VoiceInterviewProps {
 
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'speaking' | 'listening' | 'error' | 'ended'
 
+const LIVE_MODEL_FALLBACKS = [
+  'gemini-3-flash-live',
+  'gemini-3.1-flash-live-preview',
+  'gemini-2.5-flash-native-audio-preview-12-2025',
+] as const
+
+function appendTranscript(
+  prev: { role: 'user' | 'model'; text: string }[],
+  role: 'user' | 'model',
+  text: string,
+) {
+  if (!text) return prev
+  const last = prev[prev.length - 1]
+  if (last && last.role === role) {
+    return [...prev.slice(0, -1), { role, text: last.text + text }]
+  }
+  return [...prev, { role, text }]
+}
+
 export function VoiceInterview({ applicationId, jobRole, company, difficulty, onComplete }: VoiceInterviewProps) {
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -24,18 +43,25 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   const [isMuted, setIsMuted] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [activeModel, setActiveModel] = useState<string | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const processorRef = useRef<ScriptProcessorNode | null>(null)
   const audioQueueRef = useRef<ArrayBuffer[]>([])
   const isPlayingRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
   const statusRef = useRef<ConnectionStatus>('idle')
   const transcriptRef = useRef(transcript)
+  const intentionalCloseRef = useRef(false)
+  const mutedRef = useRef(false)
+  const sessionIdRef = useRef<string | null>(null)
 
   useEffect(() => { statusRef.current = status }, [status])
   useEffect(() => { transcriptRef.current = transcript }, [transcript])
+  useEffect(() => { mutedRef.current = isMuted }, [isMuted])
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
   useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [transcript])
 
   const playAudioQueue = useCallback(async () => {
@@ -43,6 +69,11 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     isPlayingRef.current = true
     const ctx = audioContextRef.current
     if (!ctx) { isPlayingRef.current = false; return }
+
+    if (ctx.state === 'suspended') {
+      try { await ctx.resume() } catch { /* ignore */ }
+    }
+
     while (audioQueueRef.current.length > 0) {
       const chunk = audioQueueRef.current.shift()!
       try {
@@ -63,17 +94,36 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     isPlayingRef.current = false
   }, [])
 
+  function stopAudioCapture() {
+    try { processorRef.current?.disconnect() } catch { /* ignore */ }
+    processorRef.current = null
+  }
+
+  function cleanup() {
+    stopAudioCapture()
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop())
+    mediaStreamRef.current = null
+    if (audioContextRef.current) {
+      void audioContextRef.current.close().catch(() => undefined)
+      audioContextRef.current = null
+    }
+    audioQueueRef.current = []
+    isPlayingRef.current = false
+  }
+
   const startAudioCapture = useCallback((ws: WebSocket, audioContext: AudioContext, stream: MediaStream) => {
+    stopAudioCapture()
     const source = audioContext.createMediaStreamSource(stream)
     const analyser = audioContext.createAnalyser()
     analyser.fftSize = 2048
     source.connect(analyser)
 
     const processor = audioContext.createScriptProcessor(4096, 1, 1)
+    processorRef.current = processor
     const dataArray = new Uint8Array(analyser.frequencyBinCount)
 
     processor.onaudioprocess = (e) => {
-      if (isMuted || ws.readyState !== WebSocket.OPEN) return
+      if (mutedRef.current || ws.readyState !== WebSocket.OPEN) return
       const input = e.inputBuffer.getChannelData(0)
 
       analyser.getByteFrequencyData(dataArray)
@@ -89,35 +139,37 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       const bytes = new Uint8Array(pcm16.buffer)
       let binary = ''
       for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+
       ws.send(JSON.stringify({
-        realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: btoa(binary) }] },
+        realtimeInput: {
+          audio: {
+            mimeType: 'audio/pcm;rate=16000',
+            data: btoa(binary),
+          },
+        },
       }))
     }
 
     source.connect(processor)
-    processor.connect(audioContext.destination)
+    // Keep the processor graph alive without echoing mic to speakers
+    const silent = audioContext.createGain()
+    silent.gain.value = 0
+    processor.connect(silent)
+    silent.connect(audioContext.destination)
     setStatus('listening')
-  }, [isMuted])
+  }, [])
 
-  function cleanup() {
-    mediaStreamRef.current?.getTracks().forEach((t) => t.stop())
-    mediaStreamRef.current = null
-    audioContextRef.current?.close()
-    audioContextRef.current = null
-    audioQueueRef.current = []
-    isPlayingRef.current = false
-  }
-
-  async function saveSession(status: 'completed' | 'cancelled', currentTranscript: typeof transcript) {
-    if (!sessionId) return
+  async function saveSession(nextStatus: 'completed' | 'cancelled', currentTranscript: typeof transcript) {
+    const id = sessionIdRef.current
+    if (!id) return
     try {
       await fetch('/api/interview/session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sessionId,
+          sessionId: id,
           transcript: currentTranscript,
-          status,
+          status: nextStatus,
         }),
       })
     } catch {
@@ -125,10 +177,171 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     }
   }
 
+  const connectWithModel = useCallback(async (
+    args: {
+      apiKey: string
+      websocketUrl: string
+      systemInstruction: string
+      model: string
+      stream: MediaStream
+      audioContext: AudioContext
+      remainingModels: string[]
+    }
+  ) => {
+    const { apiKey, websocketUrl, systemInstruction, model, stream, audioContext, remainingModels } = args
+    intentionalCloseRef.current = false
+    setActiveModel(model)
+
+    await new Promise<void>((resolve, reject) => {
+      const ws = new WebSocket(`${websocketUrl}?key=${encodeURIComponent(apiKey)}`)
+      wsRef.current = ws
+      let settled = false
+
+      const settleOk = () => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
+      const settleErr = (message: string) => {
+        if (settled) return
+        settled = true
+        reject(new Error(message))
+      }
+
+      ws.onopen = () => {
+        // Live API supports ONLY one response modality. Use AUDIO + transcriptions.
+        ws.send(JSON.stringify({
+          setup: {
+            model: model.startsWith('models/') ? model : `models/${model}`,
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } },
+              },
+            },
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
+          },
+        }))
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : null
+          if (!data) return
+
+          if (data.error) {
+            const message = data.error.message || JSON.stringify(data.error)
+            intentionalCloseRef.current = true
+            ws.close()
+            settleErr(message)
+            return
+          }
+
+          if (data.setupComplete) {
+            setStatus('connected')
+            startAudioCapture(ws, audioContext, stream)
+            // Kick off the interviewer introduction
+            ws.send(JSON.stringify({
+              clientContent: {
+                turns: [{
+                  role: 'user',
+                  parts: [{ text: 'Please begin the interview now with your introduction.' }],
+                }],
+                turnComplete: true,
+              },
+            }))
+            settleOk()
+            return
+          }
+
+          if (data.serverContent) {
+            const content = data.serverContent
+            if (content.interrupted) {
+              audioQueueRef.current = []
+              isPlayingRef.current = false
+            }
+
+            if (content.inputTranscription?.text) {
+              setTranscript((prev) => appendTranscript(prev, 'user', content.inputTranscription.text))
+            }
+            if (content.outputTranscription?.text) {
+              setTranscript((prev) => appendTranscript(prev, 'model', content.outputTranscription.text))
+            }
+
+            const parts = content.modelTurn?.parts || []
+            for (const part of parts) {
+              if (part.text) {
+                setTranscript((prev) => appendTranscript(prev, 'model', part.text))
+              }
+              if (part.inlineData?.data) {
+                const raw = atob(part.inlineData.data)
+                const buf = new ArrayBuffer(raw.length)
+                const view = new Uint8Array(buf)
+                for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i)
+                audioQueueRef.current.push(buf)
+                setStatus('speaking')
+                void playAudioQueue()
+              }
+            }
+
+            if (content.turnComplete) setStatus('listening')
+          }
+        } catch {
+          // ignore malformed messages
+        }
+      }
+
+      ws.onerror = () => {
+        settleErr('WebSocket connection failed. Check your Gemini API key and model access.')
+      }
+
+      ws.onclose = (event) => {
+        if (!settled) {
+          if (remainingModels.length > 0) {
+            settleErr(`MODEL_RETRY:${event.code}:${event.reason || 'closed'}`)
+            return
+          }
+          const detail = event.reason || `code ${event.code}`
+          settleErr(`Interview connection closed before start (${detail}). Check GEMINI_API_KEY and Live model access.`)
+          return
+        }
+
+        if (intentionalCloseRef.current) {
+          cleanup()
+          return
+        }
+
+        if (statusRef.current !== 'error' && statusRef.current !== 'ended') {
+          setStatus('ended')
+          void saveSession('completed', transcriptRef.current)
+        }
+        cleanup()
+      }
+    }).catch(async (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.startsWith('MODEL_RETRY:') && remainingModels.length > 0) {
+        const [next, ...rest] = remainingModels
+        return connectWithModel({
+          apiKey,
+          websocketUrl,
+          systemInstruction,
+          model: next,
+          stream,
+          audioContext,
+          remainingModels: rest,
+        })
+      }
+      throw err instanceof Error ? err : new Error(message)
+    })
+  }, [playAudioQueue, startAudioCapture])
+
   const startSession = useCallback(async () => {
     setStatus('connecting')
     setError(null)
     setTranscript([])
+    intentionalCloseRef.current = false
 
     try {
       const res = await fetch('/api/interview/voice-session', {
@@ -143,88 +356,45 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       const { apiKey, model, systemInstruction, websocketUrl, sessionId: newSessionId } = await res.json()
       setSessionId(newSessionId)
 
+      if (!apiKey) throw new Error('Gemini API key was not returned by the server')
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       })
       mediaStreamRef.current = stream
 
       const audioContext = new AudioContext({ sampleRate: 16000 })
       audioContextRef.current = audioContext
+      if (audioContext.state === 'suspended') await audioContext.resume()
 
-      const ws = new WebSocket(`${websocketUrl}?key=${apiKey}`)
-      wsRef.current = ws
+      const preferred = typeof model === 'string' && model ? model : LIVE_MODEL_FALLBACKS[0]
+      const candidates = [preferred, ...LIVE_MODEL_FALLBACKS.filter((m) => m !== preferred)]
 
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          setup: {
-            model: `models/${model}`,
-            generationConfig: {
-              responseModalities: ['AUDIO', 'TEXT'],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } },
-            },
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-          },
-        }))
-      }
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.setupComplete) {
-            setStatus('connected')
-            startAudioCapture(ws, audioContext, stream)
-            return
-          }
-          if (data.error) {
-            setError(`AI error: ${data.error.message || JSON.stringify(data.error)}`)
-            setStatus('error')
-            return
-          }
-          if (data.serverContent) {
-            const parts = data.serverContent.modelTurn?.parts || []
-            for (const part of parts) {
-              if (part.text) {
-                setTranscript((prev) => {
-                  const last = prev[prev.length - 1]
-                  if (last && last.role === 'model') {
-                    return [...prev.slice(0, -1), { role: 'model', text: last.text + part.text }]
-                  }
-                  return [...prev, { role: 'model', text: part.text }]
-                })
-              }
-              if (part.inlineData?.data) {
-                const raw = atob(part.inlineData.data)
-                const buf = new ArrayBuffer(raw.length)
-                const view = new Uint8Array(buf)
-                for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i)
-                audioQueueRef.current.push(buf)
-                setStatus('speaking')
-                playAudioQueue()
-              }
-            }
-            if (data.serverContent.turnComplete) setStatus('listening')
-          }
-        } catch {
-          // ignore malformed messages
-        }
-      }
-
-      ws.onerror = () => {
-        setError('Connection error. Please check your internet.')
-        setStatus('error')
-      }
-      ws.onclose = () => {
-        if (statusRef.current !== 'error' && statusRef.current !== 'ended') setStatus('ended')
-        cleanup()
-      }
+      await connectWithModel({
+        apiKey,
+        websocketUrl,
+        systemInstruction,
+        model: candidates[0],
+        stream,
+        audioContext,
+        remainingModels: candidates.slice(1),
+      })
     } catch (err: unknown) {
+      intentionalCloseRef.current = true
+      wsRef.current?.close()
       setError(err instanceof Error ? err.message : 'Failed to start')
       setStatus('error')
       cleanup()
     }
-  }, [applicationId, difficulty, playAudioQueue, startAudioCapture])
+  }, [applicationId, connectWithModel, difficulty])
 
   function endSession() {
+    intentionalCloseRef.current = true
     if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.close()
     cleanup()
     setStatus('ended')
@@ -232,8 +402,11 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   }
 
   function toggleMute() {
-    setIsMuted(!isMuted)
-    mediaStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = isMuted })
+    setIsMuted((prev) => {
+      const next = !prev
+      mediaStreamRef.current?.getAudioTracks().forEach((t) => { t.enabled = !next })
+      return next
+    })
   }
 
   const statusConfig: Record<ConnectionStatus, { label: string; color: string }> = {
@@ -257,7 +430,8 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
             </span>
           </CardTitle>
           <CardDescription>
-            {jobRole} · {difficulty} mode — speak naturally; the AI gives feedback after each answer
+            {jobRole} · {difficulty} mode
+            {activeModel ? ` · ${activeModel}` : ''} — speak naturally; the AI gives feedback after each answer
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
