@@ -18,8 +18,8 @@ interface VoiceInterviewProps {
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'speaking' | 'listening' | 'error' | 'ended'
 
 const LIVE_MODEL_FALLBACKS = [
-  'gemini-3-flash-live',
   'gemini-3.1-flash-live-preview',
+  'gemini-3-flash-live',
   'gemini-2.5-flash-native-audio-preview-12-2025',
 ] as const
 
@@ -177,6 +177,71 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     }
   }
 
+  const handleServerPayload = useCallback((
+    data: any,
+    ws: WebSocket,
+    audioContext: AudioContext,
+    stream: MediaStream,
+    onSetupComplete: () => void,
+    onSetupError: (message: string) => void,
+  ) => {
+    if (!data || typeof data !== 'object') return
+
+    if (data.error) {
+      onSetupError(data.error.message || JSON.stringify(data.error))
+      return
+    }
+
+    if (data.setupComplete) {
+      setStatus('connected')
+      startAudioCapture(ws, audioContext, stream)
+      ws.send(JSON.stringify({
+        clientContent: {
+          turns: [{
+            role: 'user',
+            parts: [{ text: 'Please begin the interview now with your introduction.' }],
+          }],
+          turnComplete: true,
+        },
+      }))
+      onSetupComplete()
+      return
+    }
+
+    if (data.serverContent) {
+      const content = data.serverContent
+      if (content.interrupted) {
+        audioQueueRef.current = []
+        isPlayingRef.current = false
+      }
+
+      if (content.inputTranscription?.text) {
+        setTranscript((prev) => appendTranscript(prev, 'user', content.inputTranscription.text))
+      }
+      if (content.outputTranscription?.text) {
+        setTranscript((prev) => appendTranscript(prev, 'model', content.outputTranscription.text))
+      }
+
+      const parts = content.modelTurn?.parts || []
+      for (const part of parts) {
+        if (part.text) {
+          setTranscript((prev) => appendTranscript(prev, 'model', part.text))
+        }
+        if (part.inlineData?.data) {
+          const raw = atob(part.inlineData.data)
+          const buf = new ArrayBuffer(raw.length)
+          const view = new Uint8Array(buf)
+          for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i)
+          audioQueueRef.current.push(buf)
+          setStatus('speaking')
+          void playAudioQueue()
+        }
+      }
+
+      if (content.turnComplete) setStatus('listening')
+    }
+  }, [playAudioQueue, startAudioCapture])
+
   const connectWithModel = useCallback(async (
     args: {
       apiKey: string
@@ -200,13 +265,25 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       const settleOk = () => {
         if (settled) return
         settled = true
+        clearTimeout(timeoutId)
         resolve()
       }
       const settleErr = (message: string) => {
         if (settled) return
         settled = true
+        clearTimeout(timeoutId)
         reject(new Error(message))
       }
+
+      const timeoutId = window.setTimeout(() => {
+        intentionalCloseRef.current = true
+        try { ws.close() } catch { /* ignore */ }
+        if (remainingModels.length > 0) {
+          settleErr(`MODEL_RETRY:timeout:${model}`)
+        } else {
+          settleErr(`Timed out connecting to ${model}. Check that GEMINI_API_KEY is a valid Google AI Studio key with Live API access.`)
+        }
+      }, 12000)
 
       ws.onopen = () => {
         // Live API supports ONLY one response modality. Use AUDIO + transcriptions.
@@ -227,69 +304,38 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       }
 
       ws.onmessage = (event) => {
-        try {
-          const data = typeof event.data === 'string' ? JSON.parse(event.data) : null
-          if (!data) return
-
-          if (data.error) {
-            const message = data.error.message || JSON.stringify(data.error)
-            intentionalCloseRef.current = true
-            ws.close()
-            settleErr(message)
-            return
-          }
-
-          if (data.setupComplete) {
-            setStatus('connected')
-            startAudioCapture(ws, audioContext, stream)
-            // Kick off the interviewer introduction
-            ws.send(JSON.stringify({
-              clientContent: {
-                turns: [{
-                  role: 'user',
-                  parts: [{ text: 'Please begin the interview now with your introduction.' }],
-                }],
-                turnComplete: true,
+        const processText = (text: string) => {
+          try {
+            handleServerPayload(
+              JSON.parse(text),
+              ws,
+              audioContext,
+              stream,
+              settleOk,
+              (message) => {
+                intentionalCloseRef.current = true
+                try { ws.close() } catch { /* ignore */ }
+                settleErr(message)
               },
-            }))
-            settleOk()
-            return
+            )
+          } catch {
+            // ignore malformed messages
           }
+        }
 
-          if (data.serverContent) {
-            const content = data.serverContent
-            if (content.interrupted) {
-              audioQueueRef.current = []
-              isPlayingRef.current = false
-            }
+        // Gemini Live may send JSON as string OR Blob/ArrayBuffer
+        if (typeof event.data === 'string') {
+          processText(event.data)
+          return
+        }
 
-            if (content.inputTranscription?.text) {
-              setTranscript((prev) => appendTranscript(prev, 'user', content.inputTranscription.text))
-            }
-            if (content.outputTranscription?.text) {
-              setTranscript((prev) => appendTranscript(prev, 'model', content.outputTranscription.text))
-            }
+        if (event.data instanceof Blob) {
+          void event.data.text().then(processText).catch(() => undefined)
+          return
+        }
 
-            const parts = content.modelTurn?.parts || []
-            for (const part of parts) {
-              if (part.text) {
-                setTranscript((prev) => appendTranscript(prev, 'model', part.text))
-              }
-              if (part.inlineData?.data) {
-                const raw = atob(part.inlineData.data)
-                const buf = new ArrayBuffer(raw.length)
-                const view = new Uint8Array(buf)
-                for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i)
-                audioQueueRef.current.push(buf)
-                setStatus('speaking')
-                void playAudioQueue()
-              }
-            }
-
-            if (content.turnComplete) setStatus('listening')
-          }
-        } catch {
-          // ignore malformed messages
+        if (event.data instanceof ArrayBuffer) {
+          processText(new TextDecoder().decode(event.data))
         }
       }
 
@@ -335,7 +381,7 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       }
       throw err instanceof Error ? err : new Error(message)
     })
-  }, [playAudioQueue, startAudioCapture])
+  }, [handleServerPayload])
 
   const startSession = useCallback(async () => {
     setStatus('connecting')
