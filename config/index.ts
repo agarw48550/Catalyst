@@ -111,11 +111,11 @@ export const config = {
     },
   },
 
-  // Feature flags
+  // Feature flags — voice interview is on by default (core product feature)
   features: {
     debugDashboard: process.env.NEXT_PUBLIC_ENABLE_DEBUG_DASHBOARD === 'true',
-    voiceInterview: process.env.NEXT_PUBLIC_ENABLE_VOICE_INTERVIEW === 'true',
-    aiCoach: process.env.NEXT_PUBLIC_ENABLE_AI_COACH === 'true',
+    voiceInterview: process.env.NEXT_PUBLIC_ENABLE_VOICE_INTERVIEW !== 'false',
+    aiCoach: process.env.NEXT_PUBLIC_ENABLE_AI_COACH !== 'false',
   },
 
   // Rate limiting and quotas
