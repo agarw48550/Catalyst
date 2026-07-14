@@ -9,11 +9,17 @@ let cachedClient: SupabaseClient<Database> | null = null
 let cachedTokenGetter: (() => Promise<string | null>) | null = null
 
 function createClerkSupabaseClient(getToken: () => Promise<string | null>): SupabaseClient<Database> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Client bundles only receive NEXT_PUBLIC_* variables at build time
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    ''
 
   if (!url || !key) {
-    throw new Error('Missing Supabase environment variables')
+    throw new Error(
+      'Missing Supabase environment variables: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)'
+    )
   }
 
   return createClient<Database>(url, key, {
