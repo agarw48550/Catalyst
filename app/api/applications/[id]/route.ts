@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient, requireClerkUserId } from '@/lib/supabase-clerk'
-import { researchCompany } from '@/lib/research/company-research'
+import { jobApplicationUpdateSchema } from '@/lib/validations'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -35,10 +35,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     await requireClerkUserId()
     const { id } = await params
     const body = await request.json()
-    const supabase = await createSupabaseServerClient()
+    const parsed = jobApplicationUpdateSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 },
+      )
+    }
 
+    const supabase = await createSupabaseServerClient()
     const updates: Record<string, unknown> = {}
-    if (body.resumeText) updates.resume_text = body.resumeText
+    if (parsed.data.resumeText !== undefined) updates.resume_text = parsed.data.resumeText
+    if (parsed.data.language !== undefined) updates.language = parsed.data.language
 
     const { data, error } = await supabase
       .from('job_applications')

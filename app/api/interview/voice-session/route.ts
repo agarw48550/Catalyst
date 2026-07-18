@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { applicationId, difficulty } = parsed.data
+    const { applicationId, difficulty, language: languageOverride } = parsed.data
     const supabase = await createSupabaseServerClient()
 
     const { data: application, error: appError } = await supabase
@@ -41,12 +41,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
+    const language = (languageOverride || application.language) as ResumeOutputLanguage
+
     const systemInstruction = buildInterviewSystemInstruction({
       jobTitle: application.job_title,
       company: application.company,
       jobDescription: application.job_description,
       resumeText: application.resume_text,
-      language: application.language as ResumeOutputLanguage,
+      language,
       difficulty,
       companyResearch: application.company_research as CompanyResearch | null,
     })
@@ -76,6 +78,7 @@ export async function POST(request: Request) {
       websocketUrl: GEMINI_LIVE_WEBSOCKET_URL,
       questionCount: INTERVIEW_QUESTION_COUNT[difficulty],
       durationMinutes: INTERVIEW_DURATION_MINUTES[difficulty],
+      language,
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create voice session'

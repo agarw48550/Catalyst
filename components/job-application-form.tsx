@@ -186,6 +186,7 @@ export function JobApplicationForm({ onSuccess }: JobApplicationFormProps) {
                 <option key={code} value={code}>{LANG_LABELS[code]}</option>
               ))}
             </select>
+            <p className="text-xs text-muted-foreground">{t('apps.preferredLanguageHint')}</p>
           </div>
 
           <div className="space-y-2">

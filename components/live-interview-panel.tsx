@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { VoiceInterview } from '@/components/voice-interview'
-import { useLanguage } from '@/lib/i18n/context'
+import { LANG_CYCLE, LANG_LABELS, useLanguage } from '@/lib/i18n/context'
 import { INTERVIEW_DURATION_MINUTES, INTERVIEW_QUESTION_COUNT } from '@/lib/interview/prompts'
-import type { InterviewDifficulty } from '@/lib/validations'
+import type { InterviewDifficulty, ResumeOutputLanguage } from '@/lib/validations'
 import type { TranslationKey } from '@/lib/i18n/translations'
 import { Clock, MessageCircleQuestion } from 'lucide-react'
 
@@ -14,6 +14,7 @@ interface LiveInterviewPanelProps {
   applicationId: string
   jobTitle: string
   company: string
+  defaultLanguage?: ResumeOutputLanguage
 }
 
 const DIFFICULTY_OPTIONS: { value: InterviewDifficulty; labelKey: TranslationKey; descKey: TranslationKey }[] = [
@@ -22,10 +23,20 @@ const DIFFICULTY_OPTIONS: { value: InterviewDifficulty; labelKey: TranslationKey
   { value: 'hard', labelKey: 'apps.difficultyHard', descKey: 'apps.difficultyHardDesc' },
 ]
 
-export function LiveInterviewPanel({ applicationId, jobTitle, company }: LiveInterviewPanelProps) {
+export function LiveInterviewPanel({
+  applicationId,
+  jobTitle,
+  company,
+  defaultLanguage = 'en',
+}: LiveInterviewPanelProps) {
   const { t } = useLanguage()
   const [difficulty, setDifficulty] = useState<InterviewDifficulty>('normal')
+  const [language, setLanguage] = useState<ResumeOutputLanguage>(defaultLanguage)
   const [started, setStarted] = useState(false)
+
+  useEffect(() => {
+    setLanguage(defaultLanguage)
+  }, [defaultLanguage])
 
   const duration = INTERVIEW_DURATION_MINUTES[difficulty]
   const questionCount = INTERVIEW_QUESTION_COUNT[difficulty]
@@ -37,6 +48,7 @@ export function LiveInterviewPanel({ applicationId, jobTitle, company }: LiveInt
         jobRole={jobTitle}
         company={company}
         difficulty={difficulty}
+        language={language}
         onComplete={() => setStarted(false)}
       />
     )
@@ -68,6 +80,23 @@ export function LiveInterviewPanel({ applicationId, jobTitle, company }: LiveInt
               {questionCount} {t('apps.interviewQuestionsCount')}
             </p>
           </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground">{t('apps.interviewAdjusting')}</p>
+
+        <div className="space-y-2">
+          <Label htmlFor="interviewLanguage">{t('apps.aiLanguageLabel')}</Label>
+          <select
+            id="interviewLanguage"
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as ResumeOutputLanguage)}
+          >
+            {LANG_CYCLE.map((code) => (
+              <option key={code} value={code}>{LANG_LABELS[code]}</option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">{t('apps.aiLanguageHint')}</p>
         </div>
 
         <div className="space-y-3">

@@ -6,11 +6,13 @@ import { useParams } from 'next/navigation'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { AppHeader } from '@/components/app-header'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ResumeTailorPanel } from '@/components/resume-tailor-panel'
 import { LiveInterviewPanel } from '@/components/live-interview-panel'
-import { LANG_LABELS, useLanguage } from '@/lib/i18n/context'
+import { LANG_CYCLE, LANG_LABELS, useLanguage } from '@/lib/i18n/context'
 import type { Language } from '@/lib/i18n/translations'
+import type { JobApplicationLanguage } from '@/lib/validations'
 
 interface JobApplication {
   id: string
@@ -31,10 +33,11 @@ interface JobApplication {
 export default function ApplicationPage() {
   const params = useParams()
   const id = params.id as string
-  const { t, lang, setLang } = useLanguage()
+  const { t } = useLanguage()
   const [application, setApplication] = useState<JobApplication | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [savingLanguage, setSavingLanguage] = useState(false)
 
   useEffect(() => {
     async function fetchApplication() {
@@ -56,11 +59,27 @@ export default function ApplicationPage() {
     fetchApplication()
   }, [id])
 
-  useEffect(() => {
-    if (application && application.language !== lang) {
-      setLang(application.language as Language)
+  async function handleLanguageChange(nextLanguage: JobApplicationLanguage) {
+    if (!application || application.language === nextLanguage) return
+    setSavingLanguage(true)
+    try {
+      const res = await fetch(`/api/applications/${application.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: nextLanguage }),
+      })
+      if (!res.ok) {
+        const payload = await res.json()
+        throw new Error(payload.error || 'Failed to update language')
+      }
+      const data = await res.json()
+      setApplication(data.application)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update language')
+    } finally {
+      setSavingLanguage(false)
     }
-  }, [application, lang, setLang])
+  }
 
   if (loading) {
     return (
@@ -84,6 +103,8 @@ export default function ApplicationPage() {
     )
   }
 
+  const appLanguage = application.language as Language
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader />
@@ -100,10 +121,28 @@ export default function ApplicationPage() {
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-black tracking-tight">{application.job_title}</h1>
             <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
-              {LANG_LABELS[application.language as Language]}
+              {LANG_LABELS[appLanguage] || application.language}
             </span>
           </div>
           <p className="mt-1 text-lg text-muted-foreground">{application.company}</p>
+
+          <div className="mt-4 max-w-sm space-y-2">
+            <Label htmlFor="applicationLanguage">{t('apps.applicationLanguage')}</Label>
+            <select
+              id="applicationLanguage"
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={application.language}
+              disabled={savingLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value as JobApplicationLanguage)}
+            >
+              {LANG_CYCLE.map((code) => (
+                <option key={code} value={code}>{LANG_LABELS[code]}</option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {savingLanguage ? t('apps.savingLanguage') : t('apps.preferredLanguageHint')}
+            </p>
+          </div>
 
           {application.company_research?.summary && (
             <div className="mt-4 rounded-xl border bg-muted/50 p-4 text-sm">
@@ -125,6 +164,7 @@ export default function ApplicationPage() {
               initialResumeText={application.resume_text}
               jobTitle={application.job_title}
               company={application.company}
+              defaultLanguage={application.language as JobApplicationLanguage}
             />
           </TabsContent>
 
@@ -133,6 +173,7 @@ export default function ApplicationPage() {
               applicationId={application.id}
               jobTitle={application.job_title}
               company={application.company}
+              defaultLanguage={application.language as JobApplicationLanguage}
             />
           </TabsContent>
         </Tabs>

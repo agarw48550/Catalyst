@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +25,7 @@ interface ResumeTailorPanelProps {
   initialResumeText: string
   jobTitle: string
   company: string
+  defaultLanguage?: ResumeOutputLanguage
 }
 
 export function ResumeTailorPanel({
@@ -32,11 +33,16 @@ export function ResumeTailorPanel({
   initialResumeText,
   jobTitle,
   company,
+  defaultLanguage,
 }: ResumeTailorPanelProps) {
   const { t, lang } = useLanguage()
   const [resumeText, setResumeText] = useState(initialResumeText)
-  const [resumeLanguage, setResumeLanguage] = useState<ResumeOutputLanguage>(lang)
+  const [resumeLanguage, setResumeLanguage] = useState<ResumeOutputLanguage>(defaultLanguage || lang)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (defaultLanguage) setResumeLanguage(defaultLanguage)
+  }, [defaultLanguage])
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<TailorResult | null>(null)
   const [copied, setCopied] = useState(false)
@@ -166,7 +172,7 @@ export function ResumeTailorPanel({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="resumeLanguage">{t('resume.outputLanguage')}</Label>
+              <Label htmlFor="resumeLanguage">{t('apps.aiLanguageLabel')}</Label>
               <select
                 id="resumeLanguage"
                 className="h-10 w-full rounded-md border bg-background px-3 text-sm"
@@ -177,6 +183,7 @@ export function ResumeTailorPanel({
                   <option key={code} value={code}>{LANG_LABELS[code]}</option>
                 ))}
               </select>
+              <p className="text-xs text-muted-foreground">{t('apps.aiLanguageHint')}</p>
             </div>
 
             {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}

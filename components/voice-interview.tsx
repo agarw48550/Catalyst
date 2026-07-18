@@ -4,10 +4,13 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { LoadingBar } from '@/components/ui/loading-bar'
+import { Progress } from '@/components/ui/progress'
 import { Mic, MicOff, Phone, PhoneOff, Loader2, Volume2, Clock, CheckCircle2 } from 'lucide-react'
-import type { InterviewDifficulty } from '@/lib/validations'
+import { useLanguage } from '@/lib/i18n/context'
+import type { InterviewDifficulty, ResumeOutputLanguage } from '@/lib/validations'
 import {
   INTERVIEW_DURATION_MINUTES,
+  INTERVIEW_LIVE_TOOLS,
   INTERVIEW_QUESTION_COUNT,
   type InterviewReport,
 } from '@/lib/interview/prompts'
@@ -17,7 +20,16 @@ interface VoiceInterviewProps {
   jobRole: string
   company: string
   difficulty: InterviewDifficulty
+  language?: ResumeOutputLanguage
   onComplete: () => void
+}
+
+interface InterviewProgressState {
+  questionsCompleted: number
+  totalQuestions: number
+  estimatedMinutesRemaining: number | null
+  progressPercent: number
+  statusNote: string
 }
 
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'speaking' | 'listening' | 'error' | 'ended'
@@ -41,7 +53,15 @@ function appendTranscript(
   return [...prev, { role, text }]
 }
 
-export function VoiceInterview({ applicationId, jobRole, company, difficulty, onComplete }: VoiceInterviewProps) {
+export function VoiceInterview({
+  applicationId,
+  jobRole,
+  company,
+  difficulty,
+  language = 'en',
+  onComplete,
+}: VoiceInterviewProps) {
+  const { t } = useLanguage()
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<{ role: 'user' | 'model'; text: string }[]>([])
@@ -54,9 +74,17 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   const [report, setReport] = useState<InterviewReport | null>(null)
   const [reportLoading, setReportLoading] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<InterviewProgressState>({
+    questionsCompleted: 0,
+    totalQuestions: INTERVIEW_QUESTION_COUNT[difficulty],
+    estimatedMinutesRemaining: INTERVIEW_DURATION_MINUTES[difficulty].max,
+    progressPercent: 0,
+    statusNote: '',
+  })
 
   const wsRef = useRef<WebSocket | null>(null)
   const finishingRef = useRef(false)
+  const pendingEndRef = useRef(false)
   const finishInterviewRef = useRef<() => void>(() => undefined)
   const audioContextRef = useRef<AudioContext | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
@@ -235,6 +263,72 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
   }
   finishInterviewRef.current = finishInterview
 
+  const handleToolCalls = useCallback((ws: WebSocket, functionCalls: any[]) => {
+    if (!Array.isArray(functionCalls) || functionCalls.length === 0) return
+
+    const responses = functionCalls.map((call) => {
+      const name = call.name as string
+      let args = call.args || call.arguments || {}
+      if (typeof args === 'string') {
+        try { args = JSON.parse(args) } catch { args = {} }
+      }
+
+      if (name === 'update_interview_progress') {
+        const questionsCompleted = Number(args.questionsCompleted ?? 0)
+        const totalQuestions = Math.max(1, Number(args.totalQuestions ?? questionCount))
+        const progressPercent = Math.max(0, Math.min(100, Number(args.progressPercent ?? 0)))
+        const estimatedMinutesRemaining = args.estimatedMinutesRemaining != null
+          ? Number(args.estimatedMinutesRemaining)
+          : null
+        const statusNote = typeof args.statusNote === 'string' ? args.statusNote : ''
+
+        setQuestionCount(totalQuestions)
+        setProgress({
+          questionsCompleted,
+          totalQuestions,
+          estimatedMinutesRemaining: Number.isFinite(estimatedMinutesRemaining as number)
+            ? (estimatedMinutesRemaining as number)
+            : null,
+          progressPercent,
+          statusNote,
+        })
+
+        return {
+          id: call.id,
+          name,
+          response: { ok: true, progressPercent, questionsCompleted, totalQuestions },
+        }
+      }
+
+      if (name === 'end_interview') {
+        pendingEndRef.current = true
+        setProgress((prev) => ({
+          ...prev,
+          progressPercent: 100,
+          statusNote: typeof args.reason === 'string' ? `Ending: ${args.reason}` : 'Ending interview',
+          estimatedMinutesRemaining: 0,
+        }))
+        return {
+          id: call.id,
+          name,
+          response: { ok: true, willEnd: true },
+        }
+      }
+
+      return {
+        id: call.id,
+        name,
+        response: { ok: false, error: 'Unknown tool' },
+      }
+    })
+
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        toolResponse: { functionResponses: responses },
+      }))
+    }
+  }, [questionCount])
+
   const handleServerPayload = useCallback((
     data: any,
     ws: WebSocket,
@@ -257,13 +351,18 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
         clientContent: {
           turns: [{
             role: 'user',
-            parts: [{ text: 'Please begin the interview now with a clear opening: introduce yourself, say how long this will take and how many questions there are, then ask me to introduce myself.' }],
+            parts: [{ text: 'Please begin the interview now with a clear opening: introduce yourself, say how long this will take and how many questions there are, call update_interview_progress for the opening state, then ask me to introduce myself.' }],
           }],
           turnComplete: true,
         },
       }))
       onSetupComplete()
       return
+    }
+
+    const toolCalls = data.toolCall?.functionCalls || data.toolCall?.function_calls
+    if (toolCalls) {
+      handleToolCalls(ws, toolCalls)
     }
 
     if (data.serverContent) {
@@ -285,6 +384,9 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
         if (part.text) {
           setTranscript((prev) => appendTranscript(prev, 'model', part.text))
         }
+        if (part.functionCall) {
+          handleToolCalls(ws, [part.functionCall])
+        }
         if (part.inlineData?.data) {
           const raw = atob(part.inlineData.data)
           const buf = new ArrayBuffer(raw.length)
@@ -296,9 +398,14 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
         }
       }
 
-      if (content.turnComplete) setStatus('listening')
+      if (content.turnComplete) {
+        setStatus('listening')
+        if (pendingEndRef.current) {
+          window.setTimeout(() => finishInterviewRef.current(), 2500)
+        }
+      }
     }
-  }, [playAudioQueue, startAudioCapture])
+  }, [handleToolCalls, playAudioQueue, startAudioCapture])
 
   const connectWithModel = useCallback(async (
     args: {
@@ -344,7 +451,7 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       }, 12000)
 
       ws.onopen = () => {
-        // Live API supports ONLY one response modality. Use AUDIO + transcriptions.
+        // Live API supports ONLY one response modality. Use AUDIO + transcriptions + progress tools.
         ws.send(JSON.stringify({
           setup: {
             model: model.startsWith('models/') ? model : `models/${model}`,
@@ -355,6 +462,7 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
               },
             },
             systemInstruction: { parts: [{ text: systemInstruction }] },
+            tools: INTERVIEW_LIVE_TOOLS,
             inputAudioTranscription: {},
             outputAudioTranscription: {},
           },
@@ -448,13 +556,21 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
     setReport(null)
     setReportError(null)
     finishingRef.current = false
+    pendingEndRef.current = false
     intentionalCloseRef.current = false
+    setProgress({
+      questionsCompleted: 0,
+      totalQuestions: INTERVIEW_QUESTION_COUNT[difficulty],
+      estimatedMinutesRemaining: INTERVIEW_DURATION_MINUTES[difficulty].max,
+      progressPercent: 0,
+      statusNote: '',
+    })
 
     try {
       const res = await fetch('/api/interview/voice-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationId, difficulty }),
+        body: JSON.stringify({ applicationId, difficulty, language }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -463,9 +579,13 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       const data = await res.json()
       const { apiKey, model, systemInstruction, websocketUrl, sessionId: newSessionId } = data
       setSessionId(newSessionId)
-      if (typeof data.questionCount === 'number') setQuestionCount(data.questionCount)
+      if (typeof data.questionCount === 'number') {
+        setQuestionCount(data.questionCount)
+        setProgress((prev) => ({ ...prev, totalQuestions: data.questionCount }))
+      }
       if (data.durationMinutes?.min && data.durationMinutes?.max) {
         setDurationRange({ min: data.durationMinutes.min, max: data.durationMinutes.max })
+        setProgress((prev) => ({ ...prev, estimatedMinutesRemaining: data.durationMinutes.max }))
       }
 
       if (!apiKey) throw new Error('Gemini API key was not returned by the server')
@@ -503,7 +623,7 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
       setStatus('error')
       cleanup()
     }
-  }, [applicationId, connectWithModel, difficulty])
+  }, [applicationId, connectWithModel, difficulty, language])
 
   function endSession() {
     finishInterview()
@@ -551,11 +671,11 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
               ~{durationRange.min}–{durationRange.max} min
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-muted-foreground">
-              {questionCount} scored questions
+              {progress.totalQuestions || questionCount} scored questions
             </span>
             {isLive && (
               <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
-                In progress — interviewer will announce remaining questions
+                In progress — {t('apps.interviewAdjusting')}
               </span>
             )}
             {status === 'ended' && (
@@ -566,8 +686,34 @@ export function VoiceInterview({ applicationId, jobRole, company, difficulty, on
             )}
           </div>
 
+          {(isLive || status === 'ended' || status === 'connecting') && (
+            <div className="space-y-2 rounded-xl border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="font-medium">{t('apps.interviewProgress')}</span>
+                <span className="text-muted-foreground">
+                  {progress.questionsCompleted}/{progress.totalQuestions}
+                  {progress.estimatedMinutesRemaining != null
+                    ? ` · ~${Math.max(0, Math.round(progress.estimatedMinutesRemaining))} ${t('apps.interviewMinutesLeft')}`
+                    : ''}
+                </span>
+              </div>
+              <Progress value={progress.progressPercent} className="h-2.5" />
+              <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  {Math.max(0, progress.totalQuestions - progress.questionsCompleted)} {t('apps.interviewQuestionsLeft')}
+                </span>
+                <span>{progress.progressPercent}%</span>
+              </div>
+              {progress.statusNote && (
+                <p className="text-xs text-muted-foreground">{progress.statusNote}</p>
+              )}
+              {status === 'connecting' && (
+                <LoadingBar active estimatedTime={5} label="Connecting to AI interviewer..." />
+              )}
+            </div>
+          )}
+
           {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-          {status === 'connecting' && <LoadingBar active estimatedTime={5} label="Connecting to AI interviewer..." />}
 
           {(status === 'listening' || status === 'speaking') && (
             <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800">

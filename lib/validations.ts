@@ -48,8 +48,17 @@ export type InterviewDifficulty = z.infer<typeof interviewDifficultySchema>
 export const interviewSessionSchema = z.object({
     applicationId: z.string().uuid(),
     difficulty: interviewDifficultySchema.optional().default('normal'),
+    language: resumeOutputLanguageSchema.optional(),
 })
 export type InterviewSessionInput = z.infer<typeof interviewSessionSchema>
+
+export const jobApplicationUpdateSchema = z.object({
+    resumeText: safeString(RESUME_INPUT_MAX_CHARS).optional(),
+    language: jobApplicationLanguageSchema.optional(),
+}).refine((data) => data.resumeText !== undefined || data.language !== undefined, {
+    message: 'At least one field is required',
+})
+export type JobApplicationUpdateInput = z.infer<typeof jobApplicationUpdateSchema>
 
 export const interviewSessionUpdateSchema = z.object({
     sessionId: z.string().uuid(),

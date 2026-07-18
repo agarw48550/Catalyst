@@ -42,4 +42,16 @@ describe('interviewSessionSchema', () => {
       expect(result.data.difficulty).toBe('normal')
     }
   })
+
+  it('accepts an optional language override', () => {
+    const result = interviewSessionSchema.safeParse({
+      applicationId: '550e8400-e29b-41d4-a716-446655440000',
+      difficulty: 'easy',
+      language: 'mr',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.language).toBe('mr')
+    }
+  })
 })

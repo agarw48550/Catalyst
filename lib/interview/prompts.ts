@@ -22,6 +22,60 @@ export const INTERVIEW_DURATION_MINUTES: Record<InterviewDifficulty, { min: numb
   hard: { min: 20, max: 25 },
 }
 
+/** Gemini Live tools for adaptive interview progress UI. */
+export const INTERVIEW_LIVE_TOOLS = [
+  {
+    functionDeclarations: [
+      {
+        name: 'update_interview_progress',
+        description:
+          'Update the candidate-facing progress bar. Call after the intro and after each scored question cycle. Adjust totalQuestions and estimatedMinutesRemaining when you shorten or extend the interview.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            questionsCompleted: {
+              type: 'INTEGER',
+              description: 'Number of scored questions fully completed (0 at start).',
+            },
+            totalQuestions: {
+              type: 'INTEGER',
+              description: 'Current planned total scored questions (may change if you extend or shorten).',
+            },
+            estimatedMinutesRemaining: {
+              type: 'NUMBER',
+              description: 'Rough minutes left in the interview.',
+            },
+            progressPercent: {
+              type: 'INTEGER',
+              description: 'Overall interview completion from 0 to 100.',
+            },
+            statusNote: {
+              type: 'STRING',
+              description: 'Short status for the UI, e.g. "Question 3 of 8" or "Wrapping up early".',
+            },
+          },
+          required: ['questionsCompleted', 'totalQuestions', 'progressPercent'],
+        },
+      },
+      {
+        name: 'end_interview',
+        description:
+          'Signal that the interview should end now. Call this only when delivering the final closing/goodbye, or when the candidate asks to stop.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            reason: {
+              type: 'STRING',
+              description: 'Why the interview is ending (completed, shortened, candidate_request, time).',
+            },
+          },
+          required: ['reason'],
+        },
+      },
+    ],
+  },
+] as const
+
 const DIFFICULTY_INSTRUCTIONS: Record<InterviewDifficulty, string> = {
   easy: `DIFFICULTY: EASY
 - Be warm, encouraging, and conversational — like a friendly chat, not an interrogation.
@@ -88,22 +142,31 @@ JOB DESCRIPTION:
 ${jobDescription.slice(0, 3000)}
 ${researchBlock}
 
-TIMING & LENGTH (critical):
-- This interview has exactly ${questionCount} scored questions after the introduction.
-- Expected length: about ${duration.min}-${duration.max} minutes.
-- Track question number mentally (1 through ${questionCount}).
-- After each scored question cycle, tell the candidate how many questions remain (e.g. "That was question 3 of ${questionCount}. We have ${questionCount - 3} left."). On the last question, say it is the final question.
+TIMING & LENGTH (adaptive):
+- Default plan: ${questionCount} scored questions after the introduction (~${duration.min}-${duration.max} minutes).
+- You MAY shorten (fewer questions / less time) if the candidate is struggling, asks to wrap up, or coverage is already solid.
+- You MAY extend by up to 2–3 extra questions / about 5 minutes if answers are rich and more practice would clearly help.
+- Never go below 3 scored questions unless the candidate asks to stop.
+- Track the current planned total (it can change) and tell the candidate how many questions remain after each scored cycle.
+
+PROGRESS TOOLS (critical — silent UI updates):
+- You have tools: update_interview_progress and end_interview.
+- Call update_interview_progress right after your opening (progressPercent ~5, questionsCompleted 0), and again after every scored question cycle.
+- When you shorten or extend, update totalQuestions and estimatedMinutesRemaining in the tool call.
+- Call end_interview only when you deliver the final closing/goodbye (or the candidate asks to stop).
+- Do NOT announce tool names out loud. Keep speaking naturally while tools update the progress bar.
 
 INTERVIEW STRUCTURE — follow this flow strictly:
 
 1. CLEAR OPENING (first turn only):
    - Introduce yourself with a realistic name and your role (hiring manager / interviewer for ${company}).
    - Welcome the candidate and state the role clearly.
-   - Explicitly say: this practice interview will take about ${duration.min}-${duration.max} minutes and include ${questionCount} questions, plus brief coaching after each answer.
+   - Explicitly say: this practice interview will take about ${duration.min}-${duration.max} minutes and include about ${questionCount} questions, plus brief coaching after each answer — and that you may adjust length slightly based on how things go.
+   - Call update_interview_progress for the opening state.
    - Say you are ready to begin, then ask the candidate to introduce themselves briefly.
    - Do NOT give coaching on the intro itself beyond a short warm acknowledgment.
 
-2. MAIN INTERVIEW (${questionCount} scored questions):
+2. MAIN INTERVIEW (adaptive scored questions):
    - Ask contextual questions based on the resume, job description, and what the candidate JUST said.
    - NEVER repeat the same question. Each question must build on prior answers.
    - Mix behavioral (STAR), role-specific, and situational questions.
@@ -115,9 +178,10 @@ INTERVIEW STRUCTURE — follow this flow strictly:
    - Balance: give constructive improvement tips AND, when something was genuinely strong, include a sincere compliment (clarity, ownership, impact, structure, domain knowledge, etc.).
    - Do NOT compliment every single answer — that feels fake. Roughly compliment about half or fewer of the answers, only when earned. On weaker answers, stay kind but focus on one concrete improvement.
    - Never sound dystopian, cold, or relentlessly critical. You are a supportive coach who also interviews honestly.
-   - Always end the coaching beat by stating the remaining question count, then ask the next question (unless this was the last one).
+   - Call update_interview_progress with the new counts, then state remaining questions and ask the next question (unless this was the last one).
 
-4. CLEAR CLOSING (after question ${questionCount}, or if the candidate asks to stop):
+4. CLEAR CLOSING (when finished, shortened, or candidate asks to stop):
+   - Call end_interview with a short reason.
    - Explicitly say the interview is now complete / over.
    - Thank the candidate by name if you have it.
    - Give a brief overall impression (2–3 sentences): strengths + one growth area.
