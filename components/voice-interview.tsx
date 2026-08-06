@@ -91,6 +91,11 @@ export function VoiceInterview({
   const processorRef = useRef<ScriptProcessorNode | null>(null)
   const audioQueueRef = useRef<ArrayBuffer[]>([])
   const isPlayingRef = useRef(false)
+  const playbackGenerationRef = useRef(0)
+  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const aiSpeakingRef = useRef(false)
+  const modelTurnOpenRef = useRef(false)
+  const kickoffSentRef = useRef(false)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
   const statusRef = useRef<ConnectionStatus>('idle')
   const transcriptRef = useRef(transcript)
@@ -104,17 +109,44 @@ export function VoiceInterview({
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
   useEffect(() => { transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [transcript])
 
+  const clearAudioPlayback = useCallback(() => {
+    playbackGenerationRef.current += 1
+    audioQueueRef.current = []
+    try { activeSourceRef.current?.stop() } catch { /* already stopped */ }
+    activeSourceRef.current = null
+    isPlayingRef.current = false
+    modelTurnOpenRef.current = false
+    aiSpeakingRef.current = false
+  }, [])
+
+  const releaseMicIfIdle = useCallback(() => {
+    if (modelTurnOpenRef.current) return
+    if (isPlayingRef.current || audioQueueRef.current.length > 0) return
+    aiSpeakingRef.current = false
+    if (statusRef.current === 'speaking' || statusRef.current === 'connected') {
+      setStatus('listening')
+    }
+  }, [])
+
   const playAudioQueue = useCallback(async () => {
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return
     isPlayingRef.current = true
+    const generation = playbackGenerationRef.current
     const ctx = audioContextRef.current
-    if (!ctx) { isPlayingRef.current = false; return }
+    if (!ctx) {
+      isPlayingRef.current = false
+      releaseMicIfIdle()
+      return
+    }
 
     if (ctx.state === 'suspended') {
       try { await ctx.resume() } catch { /* ignore */ }
     }
 
     while (audioQueueRef.current.length > 0) {
+      // Abort if a newer playback generation started (interrupt / cleanup)
+      if (playbackGenerationRef.current !== generation) break
+
       const chunk = audioQueueRef.current.shift()!
       try {
         const pcm16 = new Int16Array(chunk)
@@ -123,16 +155,22 @@ export function VoiceInterview({
         const buf = ctx.createBuffer(1, float32.length, 24000)
         buf.getChannelData(0).set(float32)
         const src = ctx.createBufferSource()
+        activeSourceRef.current = src
         src.buffer = buf
         src.connect(ctx.destination)
         src.start()
         await new Promise<void>((r) => { src.onended = () => r() })
+        if (activeSourceRef.current === src) activeSourceRef.current = null
       } catch {
         // skip bad audio chunk
       }
     }
-    isPlayingRef.current = false
-  }, [])
+
+    if (playbackGenerationRef.current === generation) {
+      isPlayingRef.current = false
+      releaseMicIfIdle()
+    }
+  }, [releaseMicIfIdle])
 
   function stopAudioCapture() {
     try { processorRef.current?.disconnect() } catch { /* ignore */ }
@@ -143,12 +181,11 @@ export function VoiceInterview({
     stopAudioCapture()
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop())
     mediaStreamRef.current = null
+    clearAudioPlayback()
     if (audioContextRef.current) {
       void audioContextRef.current.close().catch(() => undefined)
       audioContextRef.current = null
     }
-    audioQueueRef.current = []
-    isPlayingRef.current = false
   }
 
   const startAudioCapture = useCallback((ws: WebSocket, audioContext: AudioContext, stream: MediaStream) => {
@@ -163,7 +200,9 @@ export function VoiceInterview({
     const dataArray = new Uint8Array(analyser.frequencyBinCount)
 
     processor.onaudioprocess = (e) => {
-      if (mutedRef.current || ws.readyState !== WebSocket.OPEN) return
+      // Do not stream mic while the AI is talking — speaker echo makes the model
+      // hear itself and often restart/repeat the same phrase.
+      if (mutedRef.current || aiSpeakingRef.current || ws.readyState !== WebSocket.OPEN) return
       const input = e.inputBuffer.getChannelData(0)
 
       analyser.getByteFrequencyData(dataArray)
@@ -196,7 +235,6 @@ export function VoiceInterview({
     silent.gain.value = 0
     processor.connect(silent)
     silent.connect(audioContext.destination)
-    setStatus('listening')
   }, [])
 
   async function saveSession(nextStatus: 'completed' | 'cancelled', currentTranscript: typeof transcript) {
@@ -346,16 +384,24 @@ export function VoiceInterview({
 
     if (data.setupComplete) {
       setStatus('connected')
+      // Hold mic closed until after the opening so echo can't make the model
+      // restart its greeting. Start capture after sending kickoff, but keep
+      // aiSpeakingRef true until the first model turn finishes.
+      if (!kickoffSentRef.current) {
+        kickoffSentRef.current = true
+        modelTurnOpenRef.current = true
+        aiSpeakingRef.current = true
+        ws.send(JSON.stringify({
+          clientContent: {
+            turns: [{
+              role: 'user',
+              parts: [{ text: 'Please begin the interview now with a clear opening: introduce yourself, say how long this will take and how many questions there are, call update_interview_progress for the opening state, then ask me to introduce myself. Do not repeat this opening.' }],
+            }],
+            turnComplete: true,
+          },
+        }))
+      }
       startAudioCapture(ws, audioContext, stream)
-      ws.send(JSON.stringify({
-        clientContent: {
-          turns: [{
-            role: 'user',
-            parts: [{ text: 'Please begin the interview now with a clear opening: introduce yourself, say how long this will take and how many questions there are, call update_interview_progress for the opening state, then ask me to introduce myself.' }],
-          }],
-          turnComplete: true,
-        },
-      }))
       onSetupComplete()
       return
     }
@@ -368,20 +414,24 @@ export function VoiceInterview({
     if (data.serverContent) {
       const content = data.serverContent
       if (content.interrupted) {
-        audioQueueRef.current = []
-        isPlayingRef.current = false
+        clearAudioPlayback()
       }
 
       if (content.inputTranscription?.text) {
         setTranscript((prev) => appendTranscript(prev, 'user', content.inputTranscription.text))
       }
-      if (content.outputTranscription?.text) {
+
+      // Prefer dedicated output transcription; avoid also appending part.text
+      // when both are present (that doubles transcript lines).
+      const hasOutputTranscription = Boolean(content.outputTranscription?.text)
+      if (hasOutputTranscription) {
         setTranscript((prev) => appendTranscript(prev, 'model', content.outputTranscription.text))
       }
 
       const parts = content.modelTurn?.parts || []
+      let receivedAudio = false
       for (const part of parts) {
-        if (part.text) {
+        if (part.text && !hasOutputTranscription) {
           setTranscript((prev) => appendTranscript(prev, 'model', part.text))
         }
         if (part.functionCall) {
@@ -393,19 +443,26 @@ export function VoiceInterview({
           const view = new Uint8Array(buf)
           for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i)
           audioQueueRef.current.push(buf)
-          setStatus('speaking')
-          void playAudioQueue()
+          receivedAudio = true
         }
       }
 
+      if (receivedAudio) {
+        modelTurnOpenRef.current = true
+        aiSpeakingRef.current = true
+        setStatus('speaking')
+        void playAudioQueue()
+      }
+
       if (content.turnComplete) {
-        setStatus('listening')
+        modelTurnOpenRef.current = false
+        releaseMicIfIdle()
         if (pendingEndRef.current) {
           window.setTimeout(() => finishInterviewRef.current(), 2500)
         }
       }
     }
-  }, [handleToolCalls, playAudioQueue, startAudioCapture])
+  }, [clearAudioPlayback, handleToolCalls, playAudioQueue, releaseMicIfIdle, startAudioCapture])
 
   const connectWithModel = useCallback(async (
     args: {
@@ -558,6 +615,8 @@ export function VoiceInterview({
     finishingRef.current = false
     pendingEndRef.current = false
     intentionalCloseRef.current = false
+    kickoffSentRef.current = false
+    clearAudioPlayback()
     setProgress({
       questionsCompleted: 0,
       totalQuestions: INTERVIEW_QUESTION_COUNT[difficulty],
@@ -623,7 +682,7 @@ export function VoiceInterview({
       setStatus('error')
       cleanup()
     }
-  }, [applicationId, connectWithModel, difficulty, language])
+  }, [applicationId, clearAudioPlayback, connectWithModel, difficulty, language])
 
   function endSession() {
     finishInterview()

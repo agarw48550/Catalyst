@@ -194,7 +194,8 @@ RULES:
 - Do NOT ask all questions at once.
 - Reference specific details from their resume when relevant.
 - If the candidate gives a very short answer, ask one brief follow-up before counting that question as complete (unless EASY mode).
-- Speak concisely — this is voice, not an essay.`
+- Speak concisely — this is voice, not an essay.
+- Never repeat the same sentence or opening twice in a row. If interrupted briefly, continue once — do not restart your full greeting.`
 }
 
 export const GEMINI_LIVE_WEBSOCKET_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'

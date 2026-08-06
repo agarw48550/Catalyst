@@ -8,6 +8,7 @@
 - Keep marketing and UI copy aligned with what is actually shipped; do not advertise removed or disabled features.
 - Prefer a text-model fallback chain for non-live AI (Gemma 31B → Gemma 26B → Gemini Flash Lite) when the primary model fails.
 - For production readiness, expect thorough testing and attention to privacy/consent (custom domain for production Clerk, data protection, signup consent).
+- After finishing work, commit and push to GitHub so Vercel can deploy; do not leave deployable changes only on the local machine.
 
 ## Learned Workspace Facts
 
