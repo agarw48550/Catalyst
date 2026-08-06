@@ -46,7 +46,7 @@ export default function UpdatePasswordPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-4">
+        <div className="min-h-screen flex items-center justify-center gradient-bg-soft p-4">
             <div className="w-full max-w-md">
                 <Card className="shadow-xl border-0 backdrop-blur-sm bg-white/80">
                     <CardHeader className="space-y-1">

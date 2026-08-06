@@ -300,3 +300,92 @@ export async function sendWelcomeEmail(to: string, name: string) {
     text: `Hi ${name},\n\nWelcome to Catalyst (RozgarSathi) - your AI-powered career companion!\n\nGet started at: ${config.app.url}/dashboard`,
   })
 }
+
+/**
+ * Warn that inactivity will lead to data deletion
+ */
+export async function sendInactivityWarningEmail(
+  to: string,
+  name: string,
+  daysRemaining: number
+) {
+  const dashboardUrl = `${config.app.url}/dashboard`
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #111; }
+        .header { background: #0f766e; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .cta { background: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+        .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Your Catalyst data will be deleted soon</h1>
+      </div>
+      <div class="content">
+        <h2>Hi ${name},</h2>
+        <p>We noticed you haven't used Catalyst in a while. To protect your privacy, we delete inactive account data after 30 days.</p>
+        <p>Your applications, interview sessions, and resume text will be permanently deleted in about <strong>${daysRemaining} day${daysRemaining === 1 ? '' : 's'}</strong> unless you sign in again.</p>
+        <a href="${dashboardUrl}" class="cta">Keep my data — sign in</a>
+        <p>If you take no action, your data will be removed automatically and you'll receive a confirmation email.</p>
+      </div>
+      <div class="footer">
+        <p>© ${new Date().getFullYear()} Catalyst (RozgarSathi) - AI-Powered Career Platform</p>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail({
+    to,
+    subject: 'Action needed: your Catalyst data will be deleted soon',
+    html,
+    text: `Hi ${name},\n\nWe noticed you haven't used Catalyst in a while. Your applications, interview sessions, and resume text will be permanently deleted in about ${daysRemaining} day(s) unless you sign in again.\n\nKeep your data: ${dashboardUrl}\n\nIf you take no action, your data will be removed automatically and you'll receive a confirmation email.`,
+  })
+}
+
+/**
+ * Confirm that inactive user data has been deleted
+ */
+export async function sendDataDeletedEmail(to: string, name: string) {
+  const signupUrl = `${config.app.url}/`
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #111; }
+        .header { background: #334155; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; }
+        .cta { background: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 20px 0; }
+        .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Your Catalyst data has been deleted</h1>
+      </div>
+      <div class="content">
+        <h2>Hi ${name},</h2>
+        <p>Because your account was inactive for 30 days, we have permanently deleted your Catalyst data, including job applications, interview sessions, and resume text stored in the app.</p>
+        <p>Your sign-in account still exists. You can return anytime and start fresh.</p>
+        <a href="${signupUrl}" class="cta">Return to Catalyst</a>
+      </div>
+      <div class="footer">
+        <p>© ${new Date().getFullYear()} Catalyst (RozgarSathi) - AI-Powered Career Platform</p>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail({
+    to,
+    subject: 'Your Catalyst data has been deleted',
+    html,
+    text: `Hi ${name},\n\nBecause your account was inactive for 30 days, we have permanently deleted your Catalyst data, including job applications, interview sessions, and resume text stored in the app.\n\nYour sign-in account still exists. You can return anytime and start fresh: ${signupUrl}`,
+  })
+}

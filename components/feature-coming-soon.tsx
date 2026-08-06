@@ -26,7 +26,7 @@ export function FeatureComingSoon({
 
       <main id="main-content" className="container mx-auto px-4 py-12">
         <section className="relative overflow-hidden rounded-[2rem] border bg-card px-6 py-12 shadow-sm md:px-10 md:py-16">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.12),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_30%)]" />
+          <div className="absolute inset-0 harbor-surface" />
           <div className="relative mx-auto max-w-4xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">
               {t('common.comingSoon')}

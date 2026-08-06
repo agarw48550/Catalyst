@@ -49,7 +49,7 @@ export function LoadingBar({ active, estimatedTime = 15, label }: LoadingBarProp
     <div className="w-full space-y-2">
       <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+          className="h-full rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-primary via-[hsl(358_90%_62%)] to-secondary"
           style={{ width: `${progress}%` }}
         />
       </div>

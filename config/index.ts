@@ -134,6 +134,8 @@ export const config = {
   // Security
   security: {
     jwtSecret: process.env.JWT_SECRET || '',
+    /** Shared secret for Vercel Cron → /api/cron/* routes */
+    cronSecret: process.env.CRON_SECRET || '',
   },
 } as const
 

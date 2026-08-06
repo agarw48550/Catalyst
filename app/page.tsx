@@ -64,7 +64,7 @@ export default function HomePage() {
 
       <main id="main-content">
         <section className="relative overflow-hidden py-24 sm:py-32">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.15),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.1),transparent_30%)]" />
+          <div className="absolute inset-0 harbor-surface" />
           <div className="container relative mx-auto px-4">
             <div className="mx-auto max-w-4xl text-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">

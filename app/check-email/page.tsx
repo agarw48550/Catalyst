@@ -41,7 +41,7 @@ function CheckEmailContent() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 p-4">
+        <div className="min-h-screen flex items-center justify-center gradient-bg-soft dark:bg-background p-4">
             <div className="w-full max-w-md">
                 <Link
                     href="/auth/login"
@@ -52,8 +52,8 @@ function CheckEmailContent() {
                 </Link>
                 <Card className="shadow-xl border-0 backdrop-blur-sm bg-white/80 dark:bg-slate-900/80">
                     <CardHeader className="text-center space-y-4 pb-2">
-                        <div className="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <Mail className="h-8 w-8 text-indigo-600" />
+                        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                            <Mail className="h-8 w-8 text-primary" />
                         </div>
                         <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
                     </CardHeader>
@@ -126,7 +126,7 @@ export default function CheckEmailPage() {
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
+                <div className="min-h-screen flex items-center justify-center gradient-bg-soft dark:bg-background">
                     <p className="text-muted-foreground">Loading…</p>
                 </div>
             }

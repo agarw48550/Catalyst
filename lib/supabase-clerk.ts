@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { auth } from '@clerk/nextjs/server'
 import type { Database } from '@/config/supabase'
+import { touchUserActivity } from '@/lib/user-activity'
 
 function getSupabaseEnv() {
   const url =
@@ -40,5 +41,7 @@ export async function requireClerkUserId(): Promise<string> {
   if (!userId) {
     throw new Error('Unauthorized')
   }
+  // Best-effort activity heartbeat for inactivity cleanup
+  void touchUserActivity(userId)
   return userId
 }

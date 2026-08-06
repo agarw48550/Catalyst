@@ -637,60 +637,62 @@ export function VoiceInterview({
     })
   }
 
-  const statusConfig: Record<ConnectionStatus, { label: string; color: string }> = {
-    idle: { label: 'Ready to start', color: 'text-slate-500' },
-    connecting: { label: 'Connecting...', color: 'text-amber-500' },
-    connected: { label: 'Interview started', color: 'text-green-500' },
-    speaking: { label: 'Interviewer speaking...', color: 'text-blue-500' },
-    listening: { label: 'Your turn — listening...', color: 'text-green-500' },
-    error: { label: 'Error', color: 'text-red-500' },
-    ended: { label: 'Interview complete', color: 'text-slate-500' },
+  const statusConfig: Record<ConnectionStatus, { label: string; color: string; dot: string }> = {
+    idle: { label: 'Ready to start', color: 'text-muted-foreground', dot: 'bg-muted-foreground' },
+    connecting: { label: 'Connecting...', color: 'text-amber-600 dark:text-amber-400', dot: 'bg-amber-500 animate-pulse' },
+    connected: { label: 'Interview started', color: 'text-secondary', dot: 'bg-secondary' },
+    speaking: { label: 'Interviewer speaking...', color: 'text-secondary', dot: 'bg-secondary animate-pulse' },
+    listening: { label: 'Your turn — listening...', color: 'text-primary', dot: 'bg-primary animate-pulse' },
+    error: { label: 'Error', color: 'text-destructive', dot: 'bg-destructive' },
+    ended: { label: 'Interview complete', color: 'text-muted-foreground', dot: 'bg-muted-foreground' },
   }
 
   const isLive = status === 'connected' || status === 'speaking' || status === 'listening'
 
   return (
     <div className="space-y-4">
-      <Card className="dark:bg-slate-900/50">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between dark:text-white">
+      <Card className="overflow-hidden border-0 bg-card shadow-harbor-md">
+        <div className="h-1.5 w-full gradient-bg" />
+        <CardHeader className="space-y-3">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-3 text-xl font-bold tracking-tight sm:text-2xl">
             <span>Live Interview — {company}</span>
-            <span className={`text-sm font-normal ${statusConfig[status].color}`}>
-              {'\u25CF'} {statusConfig[status].label}
+            <span className={`inline-flex items-center gap-2 rounded-full border border-border/80 bg-muted/50 px-3 py-1 text-xs font-semibold sm:text-sm ${statusConfig[status].color}`}>
+              <span className={`h-2 w-2 rounded-full ${statusConfig[status].dot}`} />
+              {statusConfig[status].label}
             </span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm sm:text-base">
             {jobRole} · {difficulty} mode
             {activeModel ? ` · ${activeModel}` : ''} — coaching after answers, with sincere compliments when earned
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
+        <CardContent className="space-y-5">
+          <div className="flex flex-wrap gap-2.5 text-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/40 px-3 py-1.5 font-medium text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 text-secondary" />
               ~{durationRange.min}–{durationRange.max} min
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/40 px-3 py-1.5 font-medium text-muted-foreground">
               {progress.totalQuestions || questionCount} scored questions
             </span>
             {isLive && (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-secondary/25 bg-secondary/10 px-3 py-1.5 font-medium text-secondary">
                 In progress — {t('apps.interviewAdjusting')}
               </span>
             )}
             {status === 'ended' && (
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <CheckCircle2 className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-3 py-1.5 font-medium text-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
                 Session ended
               </span>
             )}
           </div>
 
           {(isLive || status === 'ended' || status === 'connecting') && (
-            <div className="space-y-2 rounded-xl border p-4">
+            <div className="space-y-3 rounded-xl border border-border/80 bg-gradient-to-br from-primary/5 via-card to-secondary/10 p-4 shadow-harbor">
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="font-medium">{t('apps.interviewProgress')}</span>
-                <span className="text-muted-foreground">
+                <span className="font-semibold">{t('apps.interviewProgress')}</span>
+                <span className="font-medium text-muted-foreground">
                   {progress.questionsCompleted}/{progress.totalQuestions}
                   {progress.estimatedMinutesRemaining != null
                     ? ` · ~${Math.max(0, Math.round(progress.estimatedMinutesRemaining))} ${t('apps.interviewMinutesLeft')}`
@@ -702,7 +704,7 @@ export function VoiceInterview({
                 <span>
                   {Math.max(0, progress.totalQuestions - progress.questionsCompleted)} {t('apps.interviewQuestionsLeft')}
                 </span>
-                <span>{progress.progressPercent}%</span>
+                <span className="font-semibold text-primary">{progress.progressPercent}%</span>
               </div>
               {progress.statusNote && (
                 <p className="text-xs text-muted-foreground">{progress.statusNote}</p>
@@ -713,19 +715,29 @@ export function VoiceInterview({
             </div>
           )}
 
-          {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
+          {error && <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
 
           {(status === 'listening' || status === 'speaking') && (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800">
-              <div className="relative">
+            <div className={`flex items-center gap-4 rounded-xl border p-4 ${
+              status === 'listening'
+                ? 'border-primary/25 bg-primary/5'
+                : 'border-secondary/25 bg-secondary/5'
+            }`}>
+              <div className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${
+                status === 'listening' ? 'bg-primary/15 text-primary' : 'bg-secondary/15 text-secondary'
+              }`}>
+                <span className={`absolute inset-0 rounded-2xl ${status === 'listening' ? 'bg-primary/20' : 'bg-secondary/20'} animate-soft-pulse`} />
                 {status === 'listening'
-                  ? <Mic className="h-8 w-8 text-green-500" />
-                  : <Volume2 className="h-8 w-8 text-blue-500 animate-pulse" />}
+                  ? <Mic className="relative h-7 w-7" />
+                  : <Volume2 className="relative h-7 w-7" />}
               </div>
-              <div className="flex-1">
-                <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-semibold">
+                  {status === 'listening' ? 'Listening to you' : 'Interviewer is speaking'}
+                </p>
+                <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                   <div
-                    className={`h-full rounded-full transition-all duration-100 ${status === 'listening' ? 'bg-green-500' : 'bg-blue-500'}`}
+                    className={`h-full rounded-full transition-all duration-100 ${status === 'listening' ? 'bg-primary' : 'bg-secondary'}`}
                     style={{ width: `${Math.min(100, status === 'listening' ? audioLevel * 3 : 50)}%` }}
                   />
                 </div>
@@ -733,17 +745,17 @@ export function VoiceInterview({
             </div>
           )}
 
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-wrap justify-center gap-3">
             {(status === 'idle' || status === 'error') ? (
-              <Button onClick={startSession} className="gap-2 h-12 px-6 rounded-xl">
+              <Button onClick={startSession} className="h-12 gap-2 rounded-xl px-7 font-bold shadow-harbor-md">
                 <Phone className="h-5 w-5" /> Start Interview
               </Button>
             ) : status === 'connecting' ? (
-              <Button disabled className="gap-2 h-12 px-6 rounded-xl">
+              <Button disabled className="h-12 gap-2 rounded-xl px-7 font-bold">
                 <Loader2 className="h-5 w-5 animate-spin" /> Connecting...
               </Button>
             ) : status === 'ended' ? (
-              <Button onClick={onComplete} variant="outline" className="gap-2 h-12 px-6 rounded-xl">
+              <Button onClick={onComplete} variant="outline" className="h-12 gap-2 rounded-xl px-7 font-semibold shadow-harbor">
                 Back to setup
               </Button>
             ) : (
@@ -751,12 +763,12 @@ export function VoiceInterview({
                 <Button
                   onClick={toggleMute}
                   variant="outline"
-                  className={`gap-2 h-12 px-6 rounded-xl ${isMuted ? 'bg-red-50 border-red-200 text-red-600' : ''}`}
+                  className={`h-12 gap-2 rounded-xl px-6 font-semibold shadow-harbor ${isMuted ? 'border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15' : ''}`}
                 >
                   {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   {isMuted ? 'Unmute' : 'Mute'}
                 </Button>
-                <Button onClick={endSession} variant="destructive" className="gap-2 h-12 px-6 rounded-xl">
+                <Button onClick={endSession} variant="destructive" className="h-12 gap-2 rounded-xl px-6 font-bold shadow-harbor-md">
                   <PhoneOff className="h-5 w-5" /> End Interview
                 </Button>
               </>
@@ -764,49 +776,49 @@ export function VoiceInterview({
           </div>
 
           {status === 'ended' && (
-            <div className="space-y-3 rounded-xl border p-4">
-              <h4 className="font-semibold">Interview report</h4>
+            <div className="space-y-4 rounded-xl border border-border/80 bg-muted/30 p-5 shadow-harbor">
+              <h4 className="text-lg font-bold tracking-tight">Interview report</h4>
               {reportLoading && (
                 <LoadingBar active estimatedTime={12} label="Generating your coaching report from the transcript..." />
               )}
               {reportError && (
-                <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{reportError}</div>
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{reportError}</div>
               )}
               {report && (
                 <div className="space-y-4 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-muted-foreground">{report.summary}</p>
-                    <span className="shrink-0 rounded-lg bg-primary/10 px-3 py-1.5 text-lg font-bold text-primary">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <p className="text-muted-foreground leading-relaxed">{report.summary}</p>
+                    <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-primary/10 px-4 py-2 text-xl font-black text-primary">
                       {report.overallScore}/100
                     </span>
                   </div>
                   {report.topicsDiscussed.length > 0 && (
-                    <div>
-                      <p className="mb-1 font-medium">What you talked about</p>
+                    <div className="rounded-xl border border-border/70 bg-card p-4">
+                      <p className="mb-2 font-semibold text-secondary">What you talked about</p>
                       <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
                         {report.topicsDiscussed.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     </div>
                   )}
                   {report.strengths.length > 0 && (
-                    <div>
-                      <p className="mb-1 font-medium text-green-700 dark:text-green-400">What went well</p>
+                    <div className="rounded-xl border border-secondary/20 bg-secondary/5 p-4">
+                      <p className="mb-2 font-semibold text-secondary">What went well</p>
                       <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
                         {report.strengths.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     </div>
                   )}
                   {report.gaps.length > 0 && (
-                    <div>
-                      <p className="mb-1 font-medium text-amber-700 dark:text-amber-400">Gaps / holes</p>
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                      <p className="mb-2 font-semibold text-amber-700 dark:text-amber-400">Gaps / holes</p>
                       <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
                         {report.gaps.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     </div>
                   )}
                   {report.improvements.length > 0 && (
-                    <div>
-                      <p className="mb-1 font-medium">How to improve</p>
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                      <p className="mb-2 font-semibold text-primary">How to improve</p>
                       <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
                         {report.improvements.map((item) => <li key={item}>{item}</li>)}
                       </ul>
@@ -818,20 +830,22 @@ export function VoiceInterview({
           )}
 
           {transcript.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-semibold mb-2 text-slate-500 dark:text-slate-400">Live Transcript</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+            <div className="mt-2">
+              <h4 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">Live Transcript</h4>
+              <div className="max-h-72 space-y-2.5 overflow-y-auto rounded-xl border border-border/80 bg-muted/40 p-3.5">
                 {transcript.map((entry, i) => (
                   <div
                     key={i}
-                    className={`text-sm p-2 rounded-lg ${entry.role === 'model'
-                      ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-200'
-                      : 'bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-200 ml-8'}`}
+                    className={`rounded-xl p-3 text-sm shadow-harbor ${entry.role === 'model'
+                      ? 'border border-secondary/15 bg-secondary/10 text-foreground'
+                      : 'ml-6 border border-primary/15 bg-primary/10 text-foreground'}`}
                   >
-                    <span className="font-semibold text-xs uppercase tracking-wider opacity-60">
+                    <span className={`text-[11px] font-bold uppercase tracking-wider ${
+                      entry.role === 'model' ? 'text-secondary' : 'text-primary'
+                    }`}>
                       {entry.role === 'model' ? 'Interviewer' : 'You'}
                     </span>
-                    <p className="mt-0.5">{entry.text}</p>
+                    <p className="mt-1 leading-relaxed">{entry.text}</p>
                   </div>
                 ))}
                 <div ref={transcriptEndRef} />

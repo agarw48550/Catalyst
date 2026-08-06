@@ -41,7 +41,7 @@ export default function MagicLinkPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-4">
+        <div className="min-h-screen flex items-center justify-center gradient-bg-soft p-4">
             <div className="w-full max-w-md">
                 <Link href="/auth/login" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
                     <ArrowLeft className="h-4 w-4" />

@@ -84,7 +84,7 @@ function CallbackHandler() {
     }, [searchParams, router])
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-4">
+        <div className="min-h-screen flex items-center justify-center gradient-bg-soft p-4">
             <div className="text-center space-y-4 max-w-md">
                 {status === 'loading' && (
                     <>
@@ -116,7 +116,7 @@ function CallbackHandler() {
 export default function CallbackPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-violet-50">
+            <div className="min-h-screen flex items-center justify-center gradient-bg-soft">
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
             </div>
         }>

@@ -22,7 +22,7 @@ export function AppHeader() {
                         <div className="p-1.5 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
                             <Briefcase className="h-5 w-5" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-violet-600 bg-clip-text text-transparent">Catalyst</span>
+                        <span className="text-xl font-bold tracking-tight gradient-text">Catalyst</span>
                     </Link>
                     <nav className="hidden lg:flex items-center gap-1">
                         {navItems.map((item) => (
